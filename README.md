@@ -1,61 +1,119 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 2025 選手權-renew程式碼設計架構
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+---
+## 專案概述
+本專案針對 選手權 進行架構重構，解決程式碼重複、可讀性差、維護困難等問題，提升團隊開發效率。
 
-## About Laravel
+---
+## 優化目標
+- 遵循 DRY（Don't Repeat Yourself）原則
+- 符合 SOLID 設計原則
+- 提升程式碼可讀性與維護性
+- 適合 8 人團隊（Junior/Mid-level）協作
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
+## 原始問題分析
+### 主要問題
+1. 違反 DRY 原則：大量重複的查詢邏輯
+2. 違反 SRP 原則：單一方法承擔過多責任
+3. 可讀性差：複雜的 SQL 查詢難以理解
+4. 維護困難：修改一個邏輯需要改多個地方
+### 影響範圍
+...
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+---
+## 架構重構方案
+1. QueryBuilder 分離
+   - 目的
+     - 將複雜的 SQL 查詢邏輯分離到專門的類別中，提升可重用性。
+   - 優點
+     - 單一職責：每個 QueryBuilder 只負責一種查詢
+     - 可重用：多個 Repository 方法可共用
+     - 易測試：可獨立測試查詢邏輯
+2. Trait 重構
+    - 目的
+        - 提取重複的基礎查詢邏輯，統一管理。
+    - 優點
+        - 程式碼重用：避免重複撰寫相同邏輯
+        - 統一管理：修改一處，全專案生效
+        - 易維護：邏輯集中，便於除錯
+3. （優先度低）Service 層優化
+4. Repository 簡化
+    - 目的
+        - 讓 Repository 專注於資料存取，不處理複雜業務邏輯。
+    - 優點
+        - 職責單一：只負責資料存取
+        - 易維護：邏輯清晰，易於修改
+        - 可測試：可獨立測試資料存取邏輯
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
+## （低優先）錯誤處理策略
+### 分層處理原則
+#### Controller 層
+- 處理 HTTP 相關錯誤
+- 回傳適當的狀態碼
+- 提供使用者友善的錯誤訊息
+#### Controller 層
+- 處理業務邏輯錯誤
+- 記錄業務相關日誌
+- 重新拋出給 Controller 處理
+#### Repository 層
+- 處理資料庫錯誤
+- 記錄技術錯誤
+- 包裝成業務異常
 
-## Learning Laravel
+---
+## 架構圖
+```
+┌─────────────────┐
+│   Controller    │ ← HTTP 處理、參數驗證、錯誤回應
+└─────────────────┘
+│
+┌─────────────────┐
+│    Service      │ ← 業務邏輯、資料處理、業務驗證
+└─────────────────┘
+│
+┌─────────────────┐
+│   Repository    │ ← 資料存取、查詢組裝、DB 錯誤處理
+└─────────────────┘
+│
+┌─────────────────┐
+│  QueryBuilder   │ ← 複雜查詢、可重用性、單一職責
+└─────────────────┘
+│
+┌─────────────────┐
+│     Trait       │ ← 共用方法、橫切關注點
+└─────────────────┘
+```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+---
+## 質化效益
+- 程式碼結構更清晰
+- 新成員更容易理解
+- 修改影響範圍更小
+- 測試覆蓋更容易
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+---
+## 開發注意事項
+1. 命名規範
+   - 方法名要清楚表達功能
+   - 變數名要有意義
+   - 常數統一管理
+2. 錯誤處理
+   - 分層處理錯誤
+   - 記錄適當日誌
+   - 提供使用者友善訊息
+3. 測試策略
+   - 為每個 QueryBuilder 寫單元測試
+   - 測試查詢邏輯的正確性
+   - 模擬資料庫錯誤情況
+4. 維護性
+   - 保持程式碼註解更新
+   - 定期重構重複邏輯
+   - 遵循團隊程式碼規範
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-## Laravel Sponsors
-
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
-
-### Premium Partners
-
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development/)**
-- **[Active Logic](https://activelogic.com)**
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+---
+文件版本：v1.0
+最後更新：2025年09月12日
+維護者：開發團隊
+---

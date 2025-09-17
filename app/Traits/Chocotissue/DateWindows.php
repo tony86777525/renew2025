@@ -16,7 +16,7 @@ trait DateWindows
         return Carbon::now();
     }
 
-    protected function weekStartDatetime()
+    protected function weekStartDate()
     {
         return (new Carbon('monday this week'));
     }

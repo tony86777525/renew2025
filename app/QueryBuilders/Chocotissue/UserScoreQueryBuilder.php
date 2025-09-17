@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Builder AS EloquentBuilder;
 class UserScoreQueryBuilder
 {
     public function build(
-        EloquentBuilder $tissueQuery,
+        QueryBuilder $tissueQuery,
         EloquentBuilder $weeklyOrTotalRankingPointQuery,
         EloquentBuilder $chocoMypageQuery,
         EloquentBuilder $chocoGuestQuery,

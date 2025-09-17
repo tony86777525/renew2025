@@ -14,13 +14,19 @@ Route::get('/', [TopController::class, 'index'])
 Route::get('/yc-championship', [ChocotissueController::class, 'recommendations'])
     ->name('user.chocotissue.recommendations');
 Route::get('/yc-championship/timeline', [ChocotissueController::class, 'timeline'])
-->name('user.chocotissue.list_timeline');
-Route::get('/yc-championship/user-weekly-rankings', [ChocotissueController::class, 'userWeeklyRankings'])
-->name('user.chocotissue.list_user_weekly_rankings');
+    ->name('user.chocotissue.list_timeline');
 Route::get('/yc-championship/user-rankings', [ChocotissueController::class, 'userRankings'])
     ->name('user.chocotissue.list_user_rankings');
+Route::get('/yc-championship/user-weekly-rankings', [ChocotissueController::class, 'userWeeklyRankings'])
+    ->name('user.chocotissue.list_user_weekly_rankings');
 Route::get('/yc-championship/shop-rankings', [ChocotissueController::class, 'shopRankings'])
     ->name('user.chocotissue.list_shop_rankings');
+Route::get('/yc-championship/shop-ranking-detail', [ChocotissueController::class, 'shopRankingDetail'])
+    ->name('user.chocotissue.list_user_rankings');
+Route::get('/yc-championship/hashtags', [ChocotissueController::class, 'hashtags'])
+    ->name('user.chocotissue.list_user_rankings');
+Route::get('/yc-championship/hashtag-detail/{hashtag_id}/', [ChocotissueController::class, 'hashtagDetail'])
+    ->name('user.chocotissue.list_user_rankings');
 
 Route::get('/yc-championship/liked-items', [ChocotissueController::class, 'list_liked_items'])
     ->name('user.chocotissue.list_liked_items');

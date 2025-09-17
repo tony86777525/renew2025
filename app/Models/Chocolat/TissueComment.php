@@ -4,9 +4,9 @@ namespace App\Models\Chocolat;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Hashtag extends Model
+class TissueComment extends Model
 {
-    protected $table = 'hashtags';
+    protected $table = 'tissue_comment';
 
     /**
      * Constructor

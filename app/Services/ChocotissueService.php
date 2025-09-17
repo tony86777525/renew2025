@@ -3,15 +3,24 @@
 namespace App\Services;
 
 use App\Models\Chocolat\Tissue;
-use App\Repositories\ChocotissueRepository;
+use App\Repositories\Chocotissue\ListRepository;
+use App\Repositories\Chocotissue\TissueRepository;
+use App\Repositories\Chocotissue\HashtagRepository;
 
 class ChocotissueService
 {
-    protected ChocotissueRepository $repository;
+    protected ListRepository $listRepository;
+    protected TissueRepository $tissueRepository;
+    protected HashtagRepository $hashtagRepository;
 
-    public function __construct(ChocotissueRepository $repository)
-    {
-        $this->repository = $repository;
+    public function __construct(
+        ListRepository $listRepository,
+        TissueRepository $tissueRepository,
+        HashtagRepository $hashtagRepository
+    ) {
+        $this->listRepository = $listRepository;
+        $this->tissueRepository = $tissueRepository;
+        $this->hashtagRepository = $hashtagRepository;
     }
 
     public function getTimeline(
@@ -25,7 +34,7 @@ class ChocotissueService
         $limit = 30;
         $offset = ($page - 1) * $limit;
 
-        $data = $this->repository->getTimeline($limit, $offset, $prefId);
+        $data = $this->listRepository->getTimeline($limit, $offset, $prefId);
 
         if ($data->isEmpty()) {
             return collect([]);
@@ -48,11 +57,11 @@ class ChocotissueService
 
         try {
             if ($isPC) {
-                $data = $this->repository->getPcRecommendations($limit, $offset, $prefId);
+                $data = $this->listRepository->getPcRecommendations($limit, $offset, $prefId);
             } else {
-                $data = $this->repository->getSpRecommendations($limit, $offset, $prefId);
+                $data = $this->listRepository->getSpRecommendations($limit, $offset, $prefId);
             }
-    
+
             if ($data->isEmpty()) {
                 return collect([]);
             }
@@ -66,7 +75,7 @@ class ChocotissueService
                 'prefId' => $prefId,
                 'error' => $e->getMessage()
             ]);
-            
+
             // 重新拋出，讓 Controller 處理
             throw $e;
         }
@@ -83,7 +92,7 @@ class ChocotissueService
         $limit = 30;
         $offset = ($page - 1) * $limit;
 
-        $data = $this->repository->getUserWeeklyRankings($limit, $offset, $prefId);
+        $data = $this->listRepository->getUserWeeklyRankings($limit, $offset, $prefId);
 
         if ($data->isEmpty()) {
             return collect([]);
@@ -103,12 +112,18 @@ class ChocotissueService
         $limit = 30;
         $offset = ($page - 1) * $limit;
 
-        $data = $this->repository->getUserRankings($limit, $offset, $prefId);
+        $data = $this->listRepository->getUserRankings($limit, $offset, $prefId);
+
+        if ($data->isEmpty()) {
+            return collect([]);
+        }
 
         return $this->enrichUserDataWithTissues($data);
     }
 
     public function getShopRankings(
+        array $displayedChocoShopTableIds = [],
+        array $displayedNightShopTableIds = [],
         int $page = 1,
         int $prefId = null
     ): \Illuminate\Support\Collection {
@@ -116,18 +131,169 @@ class ChocotissueService
             throw new \InvalidArgumentException('Page must be greater than 0');
         }
 
-        $limit = 50;
+        $limit = 10;
 
-        $data = $this->repository->getShopRankings([], []);
-// dd($data);
+        $data = $this->listRepository->getShopRankings([], []);
+
+        if ($data->isEmpty()) {
+            return collect([]);
+        }
+
+        // get top 10 of ranking shops
+        $shops = $data
+            ->filter(function ($shop) use (
+                $displayedChocoShopTableIds,
+                $displayedNightShopTableIds
+            ) {
+                if (!empty($shop->choco_shop_table_id)) {
+                    return !in_array($shop->choco_shop_table_id, $displayedChocoShopTableIds, true);
+                }
+                return !in_array($shop->night_shop_table_id, $displayedNightShopTableIds, true);
+            })
+            ->slice(0, $limit);
+
+        if ($data->isEmpty()) {
+            return collect([]);
+        }
+
+        $chocoShopTableIds = $shops->pluck('choco_shop_table_id')->filter()->toArray();
+        $nightShopTableIds = $shops->pluck('night_shop_table_id')->filter()->toArray();
+
+        $tissues = $this->tissueRepository->getShopRankingTopTissueOfUsers($chocoShopTableIds, $nightShopTableIds);
+
+        $shops->each(function ($shop, $rank) use ($tissues) {
+            $currentTissue = $tissues->filter(function ($tissue) use ($shop, $rank) {
+                $chocoShopTableId = !empty($tissue->choco_shop_table_id) ? $tissue->choco_shop_table_id : 0;
+                $nightShopTableId = !empty($tissue->night_shop_table_id) ? $tissue->night_shop_table_id : 0;
+
+                return (!empty($shop->choco_shop_table_id) && $chocoShopTableId == $shop->choco_shop_table_id)
+                    || (!empty($shop->night_shop_table_id) && $nightShopTableId == $shop->night_shop_table_id);
+            });
+
+            $shop->tissues = $currentTissue;
+        });
+
+        return $shops;
+    }
+
+    public function getShopRankingDetail(
+        bool $isTimeline = true,
+        int $chocoShopTableId = null,
+        int $nightShopTableId = null,
+        int $page = 1
+    ): \Illuminate\Support\Collection {
+        if (empty($chocoShopTableId) && empty($nightShopTableId)) {
+            throw new \InvalidArgumentException('Shop must not be null');
+        }
+
+        if ($page < 1) {
+            throw new \InvalidArgumentException('Page must be greater than 0');
+        }
+
+        $limit = 30;
+        $offset = ($page - 1) * $limit;
+
+        if ($isTimeline === true) {
+            $data = $this->listRepository->getShopRankingDetailTimeline([$chocoShopTableId], [$nightShopTableId], $limit, $offset);
+            return $this->enrichDataWithTissues($data);
+        } else {
+            $data = $this->listRepository->getShopRankingDetailRanking([$chocoShopTableId], [$nightShopTableId], $limit, $offset);
+            return $this->enrichUserDataWithTissues($data);
+        }
+    }
+
+    public function getHashtags(
+        array $displayedHashtagIds
+    ): \Illuminate\Support\Collection {
+        $limit = 0;
+
+        $data = $this->listRepository->getHashtags($displayedHashtagIds, $limit);
+
+        if ($data->isEmpty()) {
+            return collect([]);
+        }
+
+        $hashtagIds = $data->pluck('hashtag_id')->filter()->toArray();
+        $hashtags = $this->hashtagRepository->getHashtags($hashtagIds);
+
+        if ($hashtags->isEmpty()) {
+            return collect([]);
+        }
+
+        $tissues = $this->tissueRepository->getHashtagTopTissueOfUsers($hashtagIds);
+
+        $data->each(function ($row) use ($hashtags, $tissues) {
+            $row->hashtag = $hashtags->firstWhere('id', $row->hashtag_id);
+
+            $row->tissues = $tissues->filter(function ($tissue) use ($row) {
+                return $tissue->hashtag_id === $row->hashtag_id;
+            });
+        });
+
         return $data;
+    }
+
+    public function getHashtagDetail(
+        bool $isTimeline = true,
+        int $hashtagId = null,
+        int $page = 1
+    ): \Illuminate\Support\Collection {
+        if (empty($hashtagId) && empty($hashtagId)) {
+            throw new \InvalidArgumentException('hashtag must not be null');
+        }
+
+        if ($page < 1) {
+            throw new \InvalidArgumentException('Page must be greater than 0');
+        }
+
+        $limit = 30;
+        $offset = ($page - 1) * $limit;
+
+        if ($isTimeline === true) {
+            $data = $this->listRepository->getHashtagDetailTimeline($hashtagId, $limit, $offset);
+            return $this->enrichDataWithTissues($data);
+        } else {
+            $data = $this->listRepository->getHashtagDetailRanking($hashtagId, $limit, $offset);
+            if ($data->isEmpty()) {
+                return collect([]);
+            }
+
+            $chocoCastIds = $data->pluck('choco_cast_id')->filter()->toArray();
+            $nightCastIds = $data->pluck('night_cast_id')->filter()->toArray();
+            $chocoMypageIds = $data->pluck('choco_mypage_id')->filter()->toArray();
+            $chocoGuestIds = $data->pluck('choco_guest_id')->filter()->toArray();
+
+            if (empty($chocoCastIds) && empty($nightCastIds) && empty($chocoMypageIds) && empty($chocoGuestIds)) {
+                return collect([]);
+            }
+
+            $tissues = $this->tissueRepository->getHashtagDetailRankTopTissueOfUsers($hashtagId, $chocoCastIds, $nightCastIds, $chocoMypageIds, $chocoGuestIds);
+
+            if ($tissues->isEmpty()) {
+                return collect([]);
+            }
+
+            $data->each(function ($row) use ($tissues) {
+                if (!empty($row->choco_cast_id)) {
+                    $row->tissue = $tissues->firstWhere('cast_id', $row->choco_cast_id);
+                } elseif (!empty($row->night_cast_id)) {
+                    $row->tissue = $tissues->firstWhere('night_cast_id', $row->night_cast_id);
+                } elseif (!empty($row->choco_mypage_id)) {
+                    $row->tissue = $tissues->firstWhere('mypage_id', $row->choco_mypage_id);
+                } elseif (!empty($row->choco_guest_id)) {
+                    $row->tissue = $tissues->firstWhere('guest_id', $row->choco_guest_id);
+                }
+            });
+
+            return $data;
+        }
     }
 
     private function enrichDataWithTissues($data): \Illuminate\Support\Collection
     {
         $tissues = $this->attachTissueData($data, Tissue::TISSUE_TYPE_GIRL);
         $mensTissues = $this->attachTissueData($data, Tissue::TISSUE_TYPE_MEN);
-        
+
         if ($tissues->isNotEmpty() || $mensTissues->isNotEmpty()) {
             $data->each(function ($row) use ($tissues, $mensTissues) {
                 if ($row->tissue_type === Tissue::TISSUE_TYPE_GIRL && $tissues->isNotEmpty()) {
@@ -138,7 +304,7 @@ class ChocotissueService
                 }
             });
         }
-        
+
         return $data;
     }
 
@@ -147,22 +313,22 @@ class ChocotissueService
         if ($data->isEmpty()) {
             return collect([]);
         }
-        
+
         $chocoCastIds = $data->pluck('choco_cast_id')->filter()->toArray();
         $nightCastIds = $data->pluck('night_cast_id')->filter()->toArray();
         $chocoMypageIds = $data->pluck('choco_mypage_id')->filter()->toArray();
         $chocoGuestIds = $data->pluck('choco_guest_id')->filter()->toArray();
-        
+
         if (empty($chocoCastIds) && empty($nightCastIds) && empty($chocoMypageIds) && empty($chocoGuestIds)) {
             return collect([]);
         }
-        
-        $tissues = $this->repository->getTopTissueOfUsers($chocoCastIds, $nightCastIds, $chocoMypageIds, $chocoGuestIds);
-        
+
+        $tissues = $this->tissueRepository->getUserRankingTopTissueOfUsers($chocoCastIds, $nightCastIds, $chocoMypageIds, $chocoGuestIds);
+
         if ($tissues->isEmpty()) {
             return collect([]);
         }
-        
+
         $data->each(function ($row) use ($tissues) {
             if (!empty($row->choco_cast_id)) {
                 $row->tissue = $tissues->firstWhere('user_id_for_choco_cast', $row->choco_cast_id);
@@ -174,7 +340,7 @@ class ChocotissueService
                 $row->tissue = $tissues->firstWhere('guest_id', $row->choco_guest_id);
             }
         });
-        
+
         return $data;
     }
 
@@ -185,15 +351,13 @@ class ChocotissueService
         }
 
         $tissueIds = $data->where('tissue_type', $tissueType)->pluck('tissue_id')->filter()->toArray();
-        
+
         if (empty($tissueIds)) {
             return collect();
         }
 
-        return $tissueType === Tissue::TISSUE_TYPE_GIRL 
-            ? $this->repository->getTissues($tissueIds)
-            : $this->repository->getMensTissues($tissueIds);
+        return $tissueType === Tissue::TISSUE_TYPE_GIRL
+            ? $this->tissueRepository->getTissues($tissueIds)
+            : $this->tissueRepository->getMensTissues($tissueIds);
     }
 }
-
-

@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Builder AS EloquentBuilder;
 class ShopRankingQueryBuilder
 {
     public function buildEligibleTissue(
-        EloquentBuilder $tissueQuery,
+        QueryBuilder $tissueQuery,
         EloquentBuilder $rankingPointQuery,
     ): QueryBuilder {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
@@ -29,7 +29,8 @@ class ShopRankingQueryBuilder
                         DB::raw("MAX(COALESCE(night_casts_binding_choco_casts.shop_table_id, choco_casts.shop_table_id)) AS choco_shop_table_id"),
                         DB::raw("MAX(night_casts.shop_id) AS night_shop_table_id"),
                         DB::raw("COUNT(tissues.id) AS tissue_count"),
-                        DB::raw("MAX(COALESCE(choco_cast_ranking_points.point, night_cast_ranking_points.point, 0)) AS point")
+                        DB::raw("MAX(COALESCE(choco_cast_ranking_points.point, night_cast_ranking_points.point, 0)) AS point"),
+                        DB::raw("MAX(tissues.id) AS id")
                     )
                     ->groupBy(DB::raw("
                         CASE
@@ -74,7 +75,8 @@ class ShopRankingQueryBuilder
                 'night_shops.is_test AS night_shop_is_test',
                 'night_shops.plan AS night_shop_plan',
                 'tissues.point AS rank_point',
-                'tissues.tissue_count AS tissue_count'
+                'tissues.tissue_count AS tissue_count',
+                'tissues.id AS id'
             );
     }
 
@@ -92,7 +94,8 @@ class ShopRankingQueryBuilder
                 'choco_shop_binding_night_shop_table_id AS night_shop_table_id',
                 'choco_shop_binding_night_shop_pref_id AS night_shop_pref_id',
                 'rank_point',
-                'tissue_count'
+                'tissue_count',
+                'id'
             )
             ->where(function ($query) {
                 $query
@@ -126,7 +129,8 @@ class ShopRankingQueryBuilder
                 'night_shop_table_id AS night_shop_table_id',
                 'night_shop_pref_id AS night_shop_pref_id',
                 'rank_point',
-                'tissue_count'
+                'tissue_count',
+                'id'
             )
             ->where(function ($query) {
                 $query
