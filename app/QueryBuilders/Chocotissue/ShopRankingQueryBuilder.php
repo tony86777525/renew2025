@@ -4,13 +4,12 @@ namespace App\QueryBuilders\Chocotissue;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Query\Builder AS QueryBuilder;
-use Illuminate\Database\Eloquent\Builder AS EloquentBuilder;
 
 class ShopRankingQueryBuilder
 {
     public function buildEligibleTissue(
         QueryBuilder $tissueQuery,
-        EloquentBuilder $rankingPointQuery,
+        QueryBuilder $rankingPointQuery,
     ): QueryBuilder {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()

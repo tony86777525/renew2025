@@ -13,6 +13,15 @@ class ChocotissueController extends Controller
         $this->chocotissueService = $chocotissueService;
     }
 
+    public function handle(Request $request)
+    {
+        if ($request->get('sort') == 3) {
+            return self::likedTissues($request);
+        }
+
+        return self::recommendations($request);
+    }
+
     public function index()
     {
         return view('user.chocotissue.index');
@@ -21,7 +30,11 @@ class ChocotissueController extends Controller
     public function timeline(Request $request)
     {
         $data = $this->chocotissueService->getTimeline(true);
-        // dd($data);
+
+        $data->each(function ($row) {
+            echo "<img style=\"width: 18vw;max-height:180px;\" src=\"{$row->tissue->front_show_image_path}\">";
+        });
+        exit;
         return view('user.top.index');
     }
 
@@ -34,6 +47,10 @@ class ChocotissueController extends Controller
                 $request->integer('pref_id', null)
             );
 
+            $data->each(function ($row) {
+                echo "<img style=\"width: 18vw;max-height:180px;\" src=\"{$row->tissue->front_show_image_path}\">";
+            });
+            exit;
             return view('user.chocotissue.recommendations');
         } catch (\InvalidArgumentException $e) {
             // 參數錯誤 - 400
@@ -60,22 +77,21 @@ class ChocotissueController extends Controller
     public function userWeeklyRankings()
     {
         $data = $this->chocotissueService->getUserWeeklyRankings();
-        // $data->each(function ($row) {
-        //     echo "<img style=\"width: 18vw;max-height:180px;\" src=\"{$row->tissue->front_show_image_path}\">";
-        //     // echo "{$row->tissue->front_show_image_path}<BR>";
-        // });
-        // exit;
+        $data->each(function ($row) {
+            echo "<img style=\"width: 18vw;max-height:180px;\" src=\"{$row->tissue->front_show_image_path}\">";
+            // echo "{$row->tissue->front_show_image_path}<BR>";
+        });
+        exit;
         return view('user.top.index');
     }
 
     public function userRankings()
     {
         $data = $this->chocotissueService->getUserRankings();
-        // $data->each(function ($row) {
-        //     echo "<img style=\"width: 18vw;max-height:180px;\" src=\"{$row->tissue->front_show_image_path}\">";
-        //     // echo "{$row->tissue->front_show_image_path}<BR>";
-        // });
-        // exit;
+        $data->each(function ($row) {
+            echo "<img style=\"width: 18vw;max-height:180px;\" src=\"{$row->tissue->front_show_image_path}\">";
+        });
+        exit;
         return view('user.top.index');
     }
 
@@ -86,14 +102,14 @@ class ChocotissueController extends Controller
 
         $data = $this->chocotissueService->getShopRankings($displayedChocoShopTableIds, $displayedNightShopTableIds);
 
-        // $data->each(function ($row) {
-        //     echo "<BR><div>{$row->choco_shop_table_id}&{$row->night_shop_table_id}</div>";
-        //     $row->tissues->each(function ($tissue) {
-        //         echo "<img style=\"width: 18vw;max-height:180px;\" src=\"{$tissue->front_show_image_path}\">";
-        //     });
-        //     echo "<BR><BR><BR><BR><BR>";
-        // });
-
+        $data->each(function ($row) {
+            echo "<BR><div>{$row->choco_shop_table_id}&{$row->night_shop_table_id}</div>";
+            $row->tissues->each(function ($tissue) {
+                echo "<img style=\"width: 18vw;max-height:180px;\" src=\"{$tissue->front_show_image_path}\">";
+            });
+            echo "<BR><BR><BR><BR><BR>";
+        });
+        exit;
         return view('user.top.index');
     }
 
@@ -114,6 +130,10 @@ class ChocotissueController extends Controller
             $page,
         );
 
+        $data->each(function ($row) {
+            echo "<img style=\"width: 18vw;max-height:180px;\" src=\"{$row->tissue->front_show_image_path}\">";
+        });
+        exit;
         return view('user.top.index');
     }
 
@@ -122,15 +142,15 @@ class ChocotissueController extends Controller
         $displayedHashtagIds = [];
 
         $data = $this->chocotissueService->getHashtags($displayedHashtagIds);
-//        dd($data);
-         $data->each(function ($row) {
-             echo "<div>{$row->hashtag->id} : {$row->hashtag->name} : {$row->total_view_count}</div>";
-              $row->tissues->each(function ($tissue) {
-                  echo "<img style=\"width: 10vw;max-height:180px;\" src=\"{$tissue->front_show_image_path}\">";
-              });
-                  echo "<BR><BR><BR><BR><BR>";
-         });
-         exit;
+
+        $data->each(function ($row) {
+            echo "<div>{$row->hashtag->id} : {$row->hashtag->name} : {$row->total_view_count}</div>";
+            $row->tissues->each(function ($tissue) {
+                echo "<img style=\"width: 10vw;max-height:180px;\" src=\"{$tissue->front_show_image_path}\">";
+            });
+            echo "<BR><BR><BR><BR><BR>";
+        });
+        exit;
         return view('user.top.index');
     }
 
@@ -146,19 +166,39 @@ class ChocotissueController extends Controller
         );
 
         $data->each(function ($row) {
-             echo "<img style=\"width: 18vw;max-height:180px;\" src=\"{$row->tissue->front_show_image_path}\">";
-         });
+            echo "<img style=\"width: 18vw;max-height:180px;\" src=\"{$row->tissue->front_show_image_path}\">";
+        });
         exit;
         return view('user.top.index');
     }
 
-    public function likedItems()
+    public function likedTissues()
     {
-        return view('user.chocotissue.liked-items');
+        $tissueIds = [30423];
+        $page = 1;
+
+        $data = $this->chocotissueService->getTissues(
+            $tissueIds,
+            $page,
+        );
+
+        $data->each(function ($row) {
+            echo "<img style=\"width: 18vw;max-height:180px;\" src=\"{$row->tissue->front_show_image_path}\">";
+        });
+        exit;
+        return view('user.top.index');
     }
 
-    public function detail()
+    public function detail($tissueId)
     {
+        $data = $this->chocotissueService->getTissues(
+            [$tissueId]
+        );
+
+        $data = $data->first();
+
+        echo "<img style=\"width: 18vw;max-height:180px;\" src=\"{$data->tissue->front_show_image_path}\">";
+        exit;
         return view('user.chocotissue.detail');
     }
 }

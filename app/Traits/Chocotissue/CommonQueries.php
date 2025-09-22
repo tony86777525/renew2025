@@ -13,48 +13,59 @@ use App\Models\Chocolat\TissueNightOsusumeActiveView;
 use App\Models\Chocolat\TissueComment;
 use App\Models\Chocolat\RankingPoint;
 use App\Models\Chocolat\WeeklyRankingPoint;
+use App\Models\Chocolat\Hashtag;
 
 trait CommonQueries
 {
     protected function buildChocoMypageQuery()
     {
-        return MypageMain::query()
-            ->select('mypage_mains.id')
+        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+            ->query()
+            ->from((new MypageMain)->getTable())
             ->rightJoin('mypages', 'mypages.id', '=', 'mypage_mains.id')
+            ->select('mypage_mains.id')
             ->where('mypages.is_usable', DB::raw(1))
             ->where('mypage_mains.active_flg', DB::raw(1));
     }
 
     protected function buildChocoGuestQuery()
     {
-        return Guest::query()
+        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+            ->query()
+            ->from((new Guest)->getTable())
             ->select('id')
             ->where('hide_flg', DB::raw(0));
     }
 
     protected function buildChocoShopQuery()
     {
-        return ShopMain::query()
+        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+            ->query()
+            ->from((new ShopMain)->getTable())
+            ->rightJoin('area_prefs', 'area_prefs.area_id', 'shop_mains.pref_id')
             ->select(
                 'shop_mains.id',
                 'area_prefs.area_id AS pref_id'
-            )
-            ->rightJoin('area_prefs', 'area_prefs.area_id', 'shop_mains.pref_id');
+            );
     }
 
     protected function buildNightShopQuery()
     {
-        return YoasobiShopsAll::query()
+        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+            ->query()
+            ->from((new YoasobiShopsAll)->getTable())
+            ->rightJoin('area_prefs', 'area_prefs.area_id', 'yoasobi_shops_all.prefecture_id')
             ->select(
                 'yoasobi_shops_all.id',
                 'area_prefs.area_id AS pref_id'
-            )
-            ->rightJoin('area_prefs', 'area_prefs.area_id', 'yoasobi_shops_all.prefecture_id');
+            );
     }
 
     protected function buildWeeklyRankingPointQuery(Carbon $date)
     {
-        return WeeklyRankingPoint::query()
+        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+            ->query()
+            ->from((new WeeklyRankingPoint)->getTable())
             ->select(
                 'choco_cast_id',
                 'night_cast_id',
@@ -70,7 +81,9 @@ trait CommonQueries
 
     protected function buildRankingPointQuery(Carbon $date)
     {
-        return RankingPoint::query()
+        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+            ->query()
+            ->from((new RankingPoint)->getTable())
             ->select(
                 'choco_cast_id',
                 'night_cast_id',
@@ -86,7 +99,9 @@ trait CommonQueries
 
     protected function buildOsusumeTissueQuery(Carbon $startDate, Carbon $endDate)
     {
-        return TissueNightOsusumeActiveView::query()
+        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+            ->query()
+            ->from((new TissueNightOsusumeActiveView)->getTable())
             ->whereBetween('release_date', [$startDate, $endDate]);
     }
 
@@ -212,5 +227,24 @@ trait CommonQueries
             ])
             ->orderBy('created_at', 'DESC')
             ->limit(1);
+    }
+
+    protected function buildHashtagQuery(array $displayedHashtagIds = [])
+    {
+        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+            ->query()
+            ->from((new Hashtag)->getTable(), 'hashtags')
+            ->rightJoin('tissue_hashtags', 'hashtags.id', '=', 'tissue_hashtags.hashtag_id')
+            ->select(
+                "hashtags.id AS id",
+                "hashtags.name AS name",
+                "hashtags.active_flg",
+                "hashtags.event_type AS event_type",
+                "hashtags.add_count AS add_count",
+                'tissue_hashtags.tissue_id AS tissue_id'
+            )
+            ->when(!empty($displayedHashtagIds), function ($query) use ($displayedHashtagIds) {
+                $query->whereNotIn('id', $displayedHashtagIds);
+            });
     }
 }

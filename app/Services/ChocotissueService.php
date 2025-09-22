@@ -85,9 +85,7 @@ class ChocotissueService
         int $page = 1,
         int $prefId = null
     ): \Illuminate\Support\Collection {
-        if ($page < 1) {
-            throw new \InvalidArgumentException('Page must be greater than 0');
-        }
+        $this->validatePage($page);
 
         $limit = 30;
         $offset = ($page - 1) * $limit;
@@ -289,6 +287,25 @@ class ChocotissueService
         }
     }
 
+    public function getTissues(
+        array $tissueIds,
+        int $page = 1
+    ): \Illuminate\Support\Collection {
+        if (empty($tissueIds)) {
+            throw new \InvalidArgumentException('Tissue must not be null');
+        }
+
+        if ($page < 1) {
+            throw new \InvalidArgumentException('Page must be greater than 0');
+        }
+
+        $limit = 30;
+        $offset = ($page - 1) * $limit;
+
+        $data = $this->listRepository->getTissues($tissueIds, $limit, $offset);
+        return $this->enrichDataWithTissues($data);
+    }
+
     private function enrichDataWithTissues($data): \Illuminate\Support\Collection
     {
         $tissues = $this->attachTissueData($data, Tissue::TISSUE_TYPE_GIRL);
@@ -359,5 +376,23 @@ class ChocotissueService
         return $tissueType === Tissue::TISSUE_TYPE_GIRL
             ? $this->tissueRepository->getTissues($tissueIds)
             : $this->tissueRepository->getMensTissues($tissueIds);
+    }
+
+    // 提取共用的頁面驗證
+    private function validatePage(int $page): void
+    {
+        if ($page < 1) {
+            throw new \InvalidArgumentException('Page must be greater than 0');
+        }
+    }
+
+    // 提取共用的業務驗證
+    private function validateBusinessRules(int $page, ?int $prefId = null): void
+    {
+        $this->validatePage($page);
+
+        if ($prefId && $prefId < 1) {
+            throw new \InvalidArgumentException('PrefId must be positive');
+        }
     }
 }

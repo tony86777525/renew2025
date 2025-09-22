@@ -11,9 +11,9 @@ class UserScoreQueryBuilder
 {
     public function build(
         QueryBuilder $tissueQuery,
-        EloquentBuilder $weeklyOrTotalRankingPointQuery,
-        EloquentBuilder $chocoMypageQuery,
-        EloquentBuilder $chocoGuestQuery,
+        QueryBuilder $weeklyOrTotalRankingPointQuery,
+        QueryBuilder $chocoMypageQuery,
+        QueryBuilder $chocoGuestQuery,
         Carbon $date
     ): QueryBuilder {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))

@@ -11,7 +11,7 @@ use App\Http\Controllers\User\ChocotissueController;
 Route::get('/', [TopController::class, 'index'])
     ->name('user.top.index');
 
-Route::get('/yc-championship', [ChocotissueController::class, 'recommendations'])
+Route::get('/yc-championship', [ChocotissueController::class, 'handle'])
     ->name('user.chocotissue.recommendations');
 Route::get('/yc-championship/timeline', [ChocotissueController::class, 'timeline'])
     ->name('user.chocotissue.list_timeline');
@@ -27,8 +27,5 @@ Route::get('/yc-championship/hashtags', [ChocotissueController::class, 'hashtags
     ->name('user.chocotissue.list_user_rankings');
 Route::get('/yc-championship/hashtag-detail/{hashtag_id}/', [ChocotissueController::class, 'hashtagDetail'])
     ->name('user.chocotissue.list_user_rankings');
-
-Route::get('/yc-championship/liked-items', [ChocotissueController::class, 'list_liked_items'])
-    ->name('user.chocotissue.list_liked_items');
-Route::get('/yc-championship/detail', [ChocotissueController::class, 'detail'])
+Route::get('/detail/{tissue_id}', [ChocotissueController::class, 'detail'])
     ->name('user.chocotissue.detail');

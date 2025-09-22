@@ -4,14 +4,13 @@ namespace App\QueryBuilders\Chocotissue;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Query\Builder AS QueryBuilder;
-use Illuminate\Database\Eloquent\Builder AS EloquentBuilder;
 
 class UserTopTissueQueryBuilder
 {
     public function buildUserTissueQuery(
         QueryBuilder $tissueQuery,
-        EloquentBuilder $chocoMypageQuery,
-        EloquentBuilder $chocoGuestQuery
+        QueryBuilder $chocoMypageQuery,
+        QueryBuilder $chocoGuestQuery
     ): QueryBuilder {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
