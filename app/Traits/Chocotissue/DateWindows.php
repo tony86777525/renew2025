@@ -6,6 +6,11 @@ use Carbon\Carbon;
 
 trait DateWindows
 {
+    protected function lastChampionshipStartDatetime()
+    {
+        return new Carbon('2025-04-01 00:00:00');
+    }
+
     protected function championshipStartDatetime()
     {
         return new Carbon('2025-07-15 00:00:00');

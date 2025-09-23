@@ -13,7 +13,7 @@ class Tissue extends Model
      */
     const TISSUE_TYPE_GIRL = 'GIRL';
     const TISSUE_TYPE_MEN = 'MEN';
-    
+
     /**
      * Tissue 來源類型常數
      */
@@ -23,7 +23,7 @@ class Tissue extends Model
     const TISSUE_FROM_TYPE_GIRL_NIGHT_SHOP = 'GIRL_NIGHT_SHOP';
     const TISSUE_FROM_TYPE_MEN_CAST = 'MEN_CAST';
     const TISSUE_FROM_TYPE_MEN_GUEST = 'MEN_GUEST';
-    
+
     /**
      * 狀態常數
      */
@@ -31,9 +31,11 @@ class Tissue extends Model
     const TISSUE_STATUS_NORMAL = 1;
     const TISSUE_STATUS_ON_APPLY = 2;
     const TISSUE_STATUS_DENY = 3;
-    
+
     const PUBLISHED_FLG_FALSE = 0;
     const PUBLISHED_FLG_TRUE = 1;
+
+    CONST THUMBNAIL_SECOND = '-00003.png';
 
     /**
      * 開放程式碼新增或編輯的欄位

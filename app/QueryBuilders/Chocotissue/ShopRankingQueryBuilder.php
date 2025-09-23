@@ -9,7 +9,7 @@ class ShopRankingQueryBuilder
 {
     public function buildEligibleTissue(
         QueryBuilder $tissueQuery,
-        QueryBuilder $rankingPointQuery,
+        QueryBuilder $rankingPointQuery
     ): QueryBuilder {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
@@ -115,7 +115,7 @@ class ShopRankingQueryBuilder
     }
 
     public function buildTissueNightShop(
-        QueryBuilder $eligibleTissueQuery,
+        QueryBuilder $eligibleTissueQuery
     ): QueryBuilder {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
@@ -157,7 +157,7 @@ class ShopRankingQueryBuilder
     }
 
     public function buildUniqueCastShopPoints(
-        QueryBuilder $unpivotedShopQuery,
+        QueryBuilder $unpivotedShopQuery
     ): QueryBuilder {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
@@ -170,7 +170,7 @@ class ShopRankingQueryBuilder
                 'rank_point',
                 'tissue_count',
                 DB::raw("CONCAT(IFNULL(choco_shop_table_id, 0), '-', IFNULL(night_shop_table_id, 0)) AS canonical_shop_id"),
-                DB::raw("CONCAT(IFNULL(choco_cast_id, 0),'-',IFNULL(night_cast_id, 0)) AS canonical_cast_id"),
+                DB::raw("CONCAT(IFNULL(choco_cast_id, 0),'-',IFNULL(night_cast_id, 0)) AS canonical_cast_id")
             )
             ->distinct();
     }

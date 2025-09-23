@@ -69,8 +69,18 @@ trait CommonQueries
             ->select(
                 'choco_cast_id',
                 'night_cast_id',
-                DB::raw("CASE WHEN tissue_from_type = '" . Tissue::TISSUE_FROM_TYPE_GIRL_MYPAGE . "' THEN post_user_id END AS choco_mypage_id"),
-                DB::raw("CASE WHEN tissue_from_type = '" . Tissue::TISSUE_FROM_TYPE_GIRL_GUEST . "' THEN post_user_id END AS choco_guest_id"),
+                DB::raw("
+                    CASE
+                        WHEN tissue_from_type = '" . Tissue::TISSUE_FROM_TYPE_GIRL_MYPAGE . "' THEN
+                            post_user_id
+                    END AS choco_mypage_id
+                "),
+                DB::raw("
+                    CASE
+                        WHEN tissue_from_type = '" . Tissue::TISSUE_FROM_TYPE_GIRL_GUEST . "' THEN
+                            post_user_id
+                    END AS choco_guest_id
+                "),
                 'tissue_from_type',
                 'point',
                 'tissue_count'
@@ -102,6 +112,8 @@ trait CommonQueries
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
             ->from((new TissueNightOsusumeActiveView)->getTable())
+            ->where('published_flg', DB::raw(Tissue::PUBLISHED_FLG_TRUE))
+            ->where('tissue_status', DB::raw(Tissue::TISSUE_STATUS_NORMAL))
             ->whereBetween('release_date', [$startDate, $endDate]);
     }
 
@@ -189,7 +201,7 @@ trait CommonQueries
             ->select(
                 'id',
                 'cast_id',
-                'night_cast_id',
+                'night_cast_id'
             )
             ->where('published_flg', DB::raw(Tissue::PUBLISHED_FLG_TRUE))
             ->where('tissue_status', DB::raw(Tissue::TISSUE_STATUS_NORMAL))
@@ -206,7 +218,9 @@ trait CommonQueries
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
             ->from((new TissueComment)->getTable())
-            ->select([DB::raw('MIN(tissue_comment.created_at) AS created_at')])
+            ->select(
+                DB::raw('MIN(tissue_comment.created_at) AS created_at')
+            )
             ->leftJoin(
                 'tissue_comment AS master_tissue_comment',
                 'master_tissue_comment.id',

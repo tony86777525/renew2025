@@ -23,6 +23,13 @@ class ChocotissueService
         $this->hashtagRepository = $hashtagRepository;
     }
 
+    /**
+     * Enrich data with tissue details
+     *
+     * @param integer      $page   Page.
+     * @param integer|null $prefId Prefecture ID.
+     * @return \Illuminate\Support\Collection
+     */
     public function getTimeline(
         int $page = 1,
         int $prefId = null
@@ -43,6 +50,14 @@ class ChocotissueService
         return $this->enrichDataWithTissues($data);
     }
 
+    /**
+     * Get Recommendations
+     *
+     * @param boolean      $isPC   Is PC.
+     * @param integer      $page   Page.
+     * @param integer|null $prefId Prefecture ID.
+     * @return \Illuminate\Support\Collection
+     */
     public function getRecommendations(
         bool $isPC = true,
         int $page = 1,
@@ -137,6 +152,20 @@ class ChocotissueService
             return collect([]);
         }
 
+        if (isset($prefId) && !empty($prefId)) {
+            $data = $data
+                ->filter(function ($shop) use ($prefId) {
+                    if (!empty($shop->choco_shop_pref_id)) {
+                        return $shop->choco_shop_pref_id == $prefId;
+                    }
+                    return $shop->night_shop_pref_id == $prefId;
+                });
+
+            if ($data->isEmpty()) {
+                return collect([]);
+            }
+        }
+
         // get top 10 of ranking shops
         $shops = $data
             ->filter(function ($shop) use (
@@ -150,7 +179,7 @@ class ChocotissueService
             })
             ->slice(0, $limit);
 
-        if ($data->isEmpty()) {
+        if ($shops->isEmpty()) {
             return collect([]);
         }
 
@@ -159,8 +188,8 @@ class ChocotissueService
 
         $tissues = $this->tissueRepository->getShopRankingTopTissueOfUsers($chocoShopTableIds, $nightShopTableIds);
 
-        $shops->each(function ($shop, $rank) use ($tissues) {
-            $currentTissue = $tissues->filter(function ($tissue) use ($shop, $rank) {
+        $shops->each(function ($shop) use ($tissues) {
+            $currentTissues = $tissues->filter(function ($tissue) use ($shop) {
                 $chocoShopTableId = !empty($tissue->choco_shop_table_id) ? $tissue->choco_shop_table_id : 0;
                 $nightShopTableId = !empty($tissue->night_shop_table_id) ? $tissue->night_shop_table_id : 0;
 
@@ -168,7 +197,7 @@ class ChocotissueService
                     || (!empty($shop->night_shop_table_id) && $nightShopTableId == $shop->night_shop_table_id);
             });
 
-            $shop->tissues = $currentTissue;
+            $shop->tissues = $currentTissues;
         });
 
         return $shops;
@@ -192,10 +221,20 @@ class ChocotissueService
         $offset = ($page - 1) * $limit;
 
         if ($isTimeline === true) {
-            $data = $this->listRepository->getShopRankingDetailTimeline([$chocoShopTableId], [$nightShopTableId], $limit, $offset);
+            $data = $this->listRepository->getShopRankingDetailTimeline(
+                [$chocoShopTableId],
+                [$nightShopTableId],
+                $limit,
+                $offset
+            );
             return $this->enrichDataWithTissues($data);
         } else {
-            $data = $this->listRepository->getShopRankingDetailRanking([$chocoShopTableId], [$nightShopTableId], $limit, $offset);
+            $data = $this->listRepository->getShopRankingDetailRanking(
+                [$chocoShopTableId],
+                [$nightShopTableId],
+                $limit,
+                $offset
+            );
             return $this->enrichUserDataWithTissues($data);
         }
     }
@@ -265,7 +304,13 @@ class ChocotissueService
                 return collect([]);
             }
 
-            $tissues = $this->tissueRepository->getHashtagDetailRankTopTissueOfUsers($hashtagId, $chocoCastIds, $nightCastIds, $chocoMypageIds, $chocoGuestIds);
+            $tissues = $this->tissueRepository->getHashtagDetailRankTopTissueOfUsers(
+                $hashtagId,
+                $chocoCastIds,
+                $nightCastIds,
+                $chocoMypageIds,
+                $chocoGuestIds
+            );
 
             if ($tissues->isEmpty()) {
                 return collect([]);
@@ -340,7 +385,12 @@ class ChocotissueService
             return collect([]);
         }
 
-        $tissues = $this->tissueRepository->getUserRankingTopTissueOfUsers($chocoCastIds, $nightCastIds, $chocoMypageIds, $chocoGuestIds);
+        $tissues = $this->tissueRepository->getUserRankingTopTissueOfUsers(
+            $chocoCastIds,
+            $nightCastIds,
+            $chocoMypageIds,
+            $chocoGuestIds
+        );
 
         if ($tissues->isEmpty()) {
             return collect([]);

@@ -4,8 +4,8 @@ namespace App\Repositories\Chocotissue;
 
 use Illuminate\Support\Facades\DB;
 use App\Models\Chocolat\Tissue;
-use App\Models\Chocolat\TissueRecommendPc;
-use App\Models\Chocolat\TissueRecommendSp;
+use App\Models\Chocolat\TissueNightRecommendPc;
+use App\Models\Chocolat\TissueNightRecommendSp;
 use App\Models\Chocolat\TissueActiveView;
 use App\QueryBuilders\Chocotissue\UserScoreQueryBuilder;
 use App\QueryBuilders\Chocotissue\ShopRankingQueryBuilder;
@@ -16,12 +16,14 @@ use App\Traits\Chocotissue\ExcludedUsers;
 
 class ListRepository
 {
-    use CommonQueries, DateWindows, ExcludedUsers;
+    use CommonQueries;
+    use DateWindows;
+    use ExcludedUsers;
 
     public function getTimeline(
         int $limit,
         int $offset = 0,
-        int $prefId = null,
+        int $prefId = null
     ): \Illuminate\Support\Collection {
         $query = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
@@ -48,9 +50,9 @@ class ListRepository
     public function getPcRecommendations(
         int $limit,
         int $offset = 0,
-        int $prefId = null,
+        int $prefId = null
     ): \Illuminate\Support\Collection {
-        $startDate = $this->championshipStartDatetime();
+        $startDate = $this->lastChampionshipStartDatetime();
         $endDate = $this->nowDatetime();
 
         $tissues = $this->buildOsusumeTissueQuery($startDate, $endDate);
@@ -58,14 +60,11 @@ class ListRepository
         try {
             $query = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
                 ->query()
-                ->from((new TissueRecommendPc)->getTable())
-                ->rightJoinSub($tissues, 'tissues', function ($join) {
-                    $join->on(DB::raw("
-                        CONCAT(
-                            IF(tissue_recommend_pc.tissue_type = '" . Tissue::TISSUE_TYPE_GIRL . "', '1', '2'),
-                            CAST(tissue_recommend_pc.tissue_id AS CHAR)
-                        )
-                    "), '=', 'tissues.id');
+                ->fromSub($tissues, 'tissues')
+                ->rightJoin((new TissueNightRecommendPc)->getTable(), function ($join) {
+                    $join
+                        ->on('tissue_night_recommend_pc.tissue_id', '=', 'tissues.tissue_id')
+                        ->on('tissue_night_recommend_pc.tissue_type', '=', 'tissues.tissue_type');
                 })
                 ->select(
                     "tissues.tissue_id",
@@ -73,10 +72,10 @@ class ListRepository
                     "tissues.tissue_type",
                     "tissues.tissue_from_type"
                 )
-                ->when(isset($prefId) ,function ($query) use ($prefId) {
-                    $query->where('tissue_recommend_pc.pref_id', $prefId);
+                ->when(isset($prefId) && !empty($prefId) ,function ($query) use ($prefId) {
+                    $query->where('tissue_night_recommend_pc.pref_id', $prefId);
                 })
-                ->orderBy("tissue_recommend_pc.id", 'desc')
+                ->orderBy("tissue_night_recommend_pc.id", 'ASC')
                 ->skip($offset)
                 ->take($limit);
 
@@ -85,7 +84,7 @@ class ListRepository
             \Log::error('Database query failed', [
                 'method' => 'getRecommendations',
                 'error' => $e->getMessage(),
-                'sql' => $e->getSql()
+                'sql' => $e->getSql(),
             ]);
 
             throw new \RuntimeException('資料庫查詢失敗');
@@ -95,23 +94,20 @@ class ListRepository
     public function getSpRecommendations(
         int $limit,
         int $offset = 0,
-        int $prefId = null,
+        int $prefId = null
     ): \Illuminate\Support\Collection {
-        $startDate = $this->championshipStartDatetime();
+        $startDate = $this->lastChampionshipStartDatetime();
         $endDate = $this->nowDatetime();
 
         $tissues = $this->buildOsusumeTissueQuery($startDate, $endDate);
 
         $query = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->from((new TissueRecommendSp)->getTable())
-            ->rightJoinSub($tissues, 'tissues', function ($join) {
-                $join->on(DB::raw("
-                    CONCAT(
-                        IF(tissue_recommend_sp.tissue_type = '" . Tissue::TISSUE_TYPE_GIRL . "', '1', '2'),
-                        CAST(tissue_recommend_sp.tissue_id AS CHAR)
-                    )
-                "), '=', 'tissues.id');
+            ->fromSub($tissues, 'tissues')
+            ->rightJoin((new TissueNightRecommendSp)->getTable(), function ($join) {
+                $join
+                    ->on('tissue_night_recommend_sp.tissue_id', '=', 'tissues.tissue_id')
+                    ->on('tissue_night_recommend_sp.tissue_type', '=', 'tissues.tissue_type');
             })
             ->select(
                 "tissues.tissue_id",
@@ -119,10 +115,10 @@ class ListRepository
                 "tissues.tissue_type",
                 "tissues.tissue_from_type"
             )
-            ->when(isset($prefId) ,function ($query) use ($prefId) {
-                $query->where('tissue_recommend_sp.pref_id', $prefId);
+            ->when(isset($prefId) && !empty($prefId), function ($query) use ($prefId) {
+                $query->where('tissue_night_recommend_sp.pref_id', $prefId);
             })
-            ->orderBy("tissue_recommend_sp.id", 'desc')
+            ->orderBy("tissue_night_recommend_sp.id", 'ASC')
             ->skip($offset)
             ->take($limit);
 
@@ -132,14 +128,19 @@ class ListRepository
     public function getUserWeeklyRankings(
         int $limit,
         int $offset = 0,
-        int $prefId = null,
+        int $prefId = null
     ): \Illuminate\Support\Collection {
         $startDate = $this->championshipStartDatetime();
         $endDate = $this->nowDatetime();
         $weekStartDate = $this->weekStartDate();
         $lastWeekStartDate = $this->lastWeekStartDate();
 
-        $tissueQuery = $this->buildUserTissueQuery($startDate, $endDate, $this->excludedChocoCasts(), $this->excludedChocoGuests());
+        $tissueQuery = $this->buildUserTissueQuery(
+            $startDate,
+            $endDate,
+            $this->excludedChocoCasts(),
+            $this->excludedChocoGuests()
+        );
         $weeklyRankingPointQuery = $this->buildWeeklyRankingPointQuery($lastWeekStartDate);
         $chocoMypageQuery = $this->buildChocoMypageQuery();
         $chocoGuestQuery = $this->buildChocoGuestQuery();
@@ -171,9 +172,9 @@ class ListRepository
                 "user_scores.point",
                 "user_scores.total_good_count",
                 "user_scores.tissue_count",
-                "user_scores.last_tissue_id",
+                "user_scores.last_tissue_id"
             )
-            ->when(isset($prefId) ,function ($query) use ($prefId) {
+            ->when(isset($prefId) && !empty($prefId), function ($query) use ($prefId) {
                 $query
                     ->where('choco_shops.pref_id', $prefId)
                     ->orWhere('night_shops.pref_id', $prefId);
@@ -190,12 +191,17 @@ class ListRepository
     public function getUserRankings(
         int $limit,
         int $offset = 0,
-        int $prefId = null,
+        int $prefId = null
     ): \Illuminate\Support\Collection {
         $startDate = $this->championshipStartDatetime();
         $endDate = $this->nowDatetime();
 
-        $tissueQuery = $this->buildUserTissueQuery($startDate, $endDate, $this->excludedChocoCasts(), $this->excludedChocoGuests());
+        $tissueQuery = $this->buildUserTissueQuery(
+            $startDate,
+            $endDate,
+            $this->excludedChocoCasts(),
+            $this->excludedChocoGuests()
+        );
         $rankingPointQuery = $this->buildRankingPointQuery($startDate);
         $chocoMypageQuery = $this->buildChocoMypageQuery();
         $chocoGuestQuery = $this->buildChocoGuestQuery();
@@ -225,12 +231,14 @@ class ListRepository
                 "user_scores.choco_mypage_id",
                 "user_scores.choco_guest_id",
                 "user_scores.point",
-                "user_scores.last_tissue_id",
+                "user_scores.last_tissue_id"
             )
-            ->when(isset($prefId) ,function ($query) use ($prefId) {
-                $query
-                    ->where('choco_shops.pref_id', $prefId)
-                    ->orWhere('night_shops.pref_id', $prefId);
+            ->when(isset($prefId) && !empty($prefId), function ($query) use ($prefId) {
+                $query->where(function ($query) use ($prefId) {
+                    $query
+                        ->where('choco_shops.pref_id', $prefId)
+                        ->orWhere('night_shops.pref_id', $prefId);
+                });
             })
             ->orderBy('user_scores.point', 'DESC')
             ->orderBy('user_scores.last_tissue_id', 'DESC')
@@ -296,7 +304,7 @@ class ListRepository
         array $chocoShopTableIds = null,
         array $nightShopTableIds = null,
         int $limit,
-        int $offset = 0,
+        int $offset = 0
     ): \Illuminate\Support\Collection {
         $startDate = $this->championshipStartDatetime();
         $endDate = $this->nowDatetime();
@@ -314,7 +322,7 @@ class ListRepository
                 "tissues.id AS tissue_id",
                 "tissues.release_date",
                 DB::raw("'{$tissueType}' AS tissue_type"),
-                DB::raw("({$tissueCommentLastOneQuery->toSql()}) AS last_comment_date"),
+                DB::raw("({$tissueCommentLastOneQuery->toSql()}) AS last_comment_date")
             )
             ->when(!empty($chocoShopTableIds), function ($query) use ($chocoShopTableIds) {
                 $query->whereIn("choco_casts.shop_table_id", $chocoShopTableIds);
@@ -341,7 +349,7 @@ class ListRepository
         array $chocoShopTableIds = null,
         array $nightShopTableIds = null,
         int $limit = null,
-        int $offset = 0,
+        int $offset = 0
     ): \Illuminate\Support\Collection {
         $startDate = $this->championshipStartDatetime();
         $endDate = $this->nowDatetime();
@@ -389,11 +397,16 @@ class ListRepository
         $startDate = $this->championshipStartDatetime();
         $endDate = $this->nowDatetime();
 
-        $tissueQuery = $this->buildUserTissueQuery($startDate, $endDate, $this->excludedChocoCasts(), $this->excludedChocoGuests());
+        $tissueQuery = $this->buildUserTissueQuery(
+            $startDate,
+            $endDate,
+            $this->excludedChocoCasts(),
+            $this->excludedChocoGuests()
+        );
         $chocoMypageQuery = $this->buildChocoMypageQuery();
         $chocoGuestQuery = $this->buildChocoGuestQuery();
         $tissueCommentLastOneQuery = $this->buildTissueCommentLastOneQuery();
-        $hashtagQuery = $this->buildHashtagQuery();
+        $hashtagQuery = $this->buildHashtagQuery($displayedHashtagIds);
 
         $builder = new HashtagQueryBuilder;
         $eligibleTissueQuery = $builder->buildEligibleTissue(
@@ -456,12 +469,17 @@ class ListRepository
     public function getHashtagDetailTimeline(
         int $hashtagId = null,
         int $limit,
-        int $offset = 0,
+        int $offset = 0
     ): \Illuminate\Support\Collection {
         $startDate = $this->championshipStartDatetime();
         $endDate = $this->nowDatetime();
 
-        $tissueQuery = $this->buildUserTissueQuery($startDate, $endDate, $this->excludedChocoCasts(), $this->excludedChocoGuests());
+        $tissueQuery = $this->buildUserTissueQuery(
+            $startDate,
+            $endDate,
+            $this->excludedChocoCasts(),
+            $this->excludedChocoGuests()
+        );
         $chocoMypageQuery = $this->buildChocoMypageQuery();
         $chocoGuestQuery = $this->buildChocoGuestQuery();
         $tissueCommentLastOneQuery = $this->buildTissueCommentLastOneQuery();
@@ -497,7 +515,7 @@ class ListRepository
             ->from($baseQuery, 'base_data')
             ->select(
                 "*",
-                DB::raw("'{$tissueType}' AS tissue_type"),
+                DB::raw("'{$tissueType}' AS tissue_type")
             )
             ->when(!empty($hashtagId), function ($query) use ($hashtagId) {
                 $query->where("hashtag_id", '=', DB::raw($hashtagId));
@@ -513,12 +531,17 @@ class ListRepository
     public function getHashtagDetailRanking(
         int $hashtagId = null,
         int $limit = null,
-        int $offset = 0,
+        int $offset = 0
     ): \Illuminate\Support\Collection {
         $startDate = $this->championshipStartDatetime();
         $endDate = $this->nowDatetime();
 
-        $tissueQuery = $this->buildUserTissueQuery($startDate, $endDate, $this->excludedChocoCasts(), $this->excludedChocoGuests());
+        $tissueQuery = $this->buildUserTissueQuery(
+            $startDate,
+            $endDate,
+            $this->excludedChocoCasts(),
+            $this->excludedChocoGuests()
+        );
         $chocoMypageQuery = $this->buildChocoMypageQuery();
         $chocoGuestQuery = $this->buildChocoGuestQuery();
 
@@ -526,7 +549,7 @@ class ListRepository
             ->query()
             ->fromSub($tissueQuery, 'tissues')
             ->select(
-                "tissues.*",
+                "tissues.*"
             )
             ->leftJoin('casts AS choco_casts', 'choco_casts.id', '=', 'tissues.cast_id')
             ->leftJoin('yoasobi_casts AS night_casts', 'night_casts.id', '=', 'tissues.night_cast_id')
@@ -585,12 +608,17 @@ class ListRepository
     public function getTissues(
         array $tissueIds,
         int $limit,
-        int $offset = 0,
+        int $offset = 0
     ): \Illuminate\Support\Collection {
         $startDate = $this->championshipStartDatetime();
         $endDate = $this->nowDatetime();
 
-        $tissueQuery = $this->buildUserTissueQuery($startDate, $endDate, $this->excludedChocoCasts(), $this->excludedChocoGuests());
+        $tissueQuery = $this->buildUserTissueQuery(
+            $startDate,
+            $endDate,
+            $this->excludedChocoCasts(),
+            $this->excludedChocoGuests()
+        );
         $chocoMypageQuery = $this->buildChocoMypageQuery();
         $chocoGuestQuery = $this->buildChocoGuestQuery();
         $tissueCommentLastOneQuery = $this->buildTissueCommentLastOneQuery();
@@ -623,7 +651,7 @@ class ListRepository
                 "tissues.id AS tissue_id",
                 "tissues.release_date",
                 DB::raw("'{$tissueType}' AS tissue_type"),
-                DB::raw("({$tissueCommentLastOneQuery->toSql()}) AS last_comment_date"),
+                DB::raw("({$tissueCommentLastOneQuery->toSql()}) AS last_comment_date")
             )
             ->when(!empty($tissueIds), function ($query) use ($tissueIds) {
                 $query->whereIn("id", $tissueIds);

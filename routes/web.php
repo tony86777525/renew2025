@@ -27,5 +27,5 @@ Route::get('/yc-championship/hashtags', [ChocotissueController::class, 'hashtags
     ->name('user.chocotissue.list_user_rankings');
 Route::get('/yc-championship/hashtag-detail/{hashtag_id}/', [ChocotissueController::class, 'hashtagDetail'])
     ->name('user.chocotissue.list_user_rankings');
-Route::get('/detail/{tissue_id}', [ChocotissueController::class, 'detail'])
+Route::get('/yc-championship/detail/{tissue_id}', [ChocotissueController::class, 'detail'])
     ->name('user.chocotissue.detail');

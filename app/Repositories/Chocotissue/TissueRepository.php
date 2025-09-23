@@ -2,7 +2,6 @@
 
 namespace App\Repositories\Chocotissue;
 
-use App\Models\Chocolat\Hashtag;
 use Illuminate\Support\Facades\DB;
 use App\Models\Chocolat\Tissue;
 use App\Models\Chocolat\MensTissue;
@@ -13,7 +12,9 @@ use App\Traits\Chocotissue\ExcludedUsers;
 
 class TissueRepository
 {
-    use CommonQueries, DateWindows, ExcludedUsers;
+    use CommonQueries;
+    use DateWindows;
+    use ExcludedUsers;
 
     public function getTissues(array $ids): \Illuminate\Database\Eloquent\Collection
     {
@@ -40,7 +41,12 @@ class TissueRepository
         $startDate = $this->championshipStartDatetime();
         $endDate = $this->nowDatetime();
 
-        $tissueQuery = $this->buildUserTissueQuery($startDate, $endDate, $this->excludedChocoCasts(), $this->excludedChocoGuests());
+        $tissueQuery = $this->buildUserTissueQuery(
+            $startDate,
+            $endDate,
+            $this->excludedChocoCasts(),
+            $this->excludedChocoGuests()
+        );
         $chocoMypageQuery = $this->buildChocoMypageQuery();
         $chocoGuestQuery = $this->buildChocoGuestQuery();
 
@@ -78,7 +84,12 @@ class TissueRepository
         $startDate = $this->championshipStartDatetime();
         $endDate = $this->nowDatetime();
 
-        $tissueQuery = $this->buildUserTissueQuery($startDate, $endDate, $this->excludedChocoCasts(), $this->excludedChocoGuests());
+        $tissueQuery = $this->buildUserTissueQuery(
+            $startDate,
+            $endDate,
+            $this->excludedChocoCasts(),
+            $this->excludedChocoGuests()
+        );
         $chocoMypageQuery = $this->buildChocoMypageQuery();
         $chocoGuestQuery = $this->buildChocoGuestQuery();
         $tissueCommentLastOneQuery = $this->buildTissueCommentLastOneQuery();
@@ -114,7 +125,12 @@ class TissueRepository
         $startDate = $this->championshipStartDatetime();
         $endDate = $this->nowDatetime();
 
-        $tissueQuery = $this->buildUserTissueQuery($startDate, $endDate, $this->excludedChocoCasts(), $this->excludedChocoGuests());
+        $tissueQuery = $this->buildUserTissueQuery(
+            $startDate,
+            $endDate,
+            $this->excludedChocoCasts(),
+            $this->excludedChocoGuests()
+        );
         $chocoMypageQuery = $this->buildChocoMypageQuery();
         $chocoGuestQuery = $this->buildChocoGuestQuery();
         $tissueCommentLastOneQuery = $this->buildTissueCommentLastOneQuery();
@@ -135,7 +151,7 @@ class TissueRepository
                                 tissues.release_date
                         END
                     ) AS last_update_datetime
-                "),
+                ")
             );
 
         $tissueShowNumQuery = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
@@ -155,7 +171,12 @@ class TissueRepository
                         'hashtags.hashtag_id',
                         DB::raw("
                             ROW_NUMBER() OVER (
-                                PARTITION BY hashtags.hashtag_id, tissues.mypage_id, tissues.cast_id, tissues.night_cast_id, tissues.guest_id
+                                PARTITION BY
+                                    hashtags.hashtag_id,
+                                    tissues.mypage_id,
+                                    tissues.cast_id,
+                                    tissues.night_cast_id,
+                                    tissues.guest_id
                                 ORDER BY
                                     tissues.last_update_datetime DESC,
                                     tissues.id ASC
@@ -205,7 +226,12 @@ class TissueRepository
         $startDate = $this->championshipStartDatetime();
         $endDate = $this->nowDatetime();
 
-        $tissueQuery = $this->buildUserTissueQuery($startDate, $endDate, $this->excludedChocoCasts(), $this->excludedChocoGuests());
+        $tissueQuery = $this->buildUserTissueQuery(
+            $startDate,
+            $endDate,
+            $this->excludedChocoCasts(),
+            $this->excludedChocoGuests()
+        );
         $chocoMypageQuery = $this->buildChocoMypageQuery();
         $chocoGuestQuery = $this->buildChocoGuestQuery();
 

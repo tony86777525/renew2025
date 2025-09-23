@@ -8,6 +8,11 @@ use App\Services\ChocotissueService;
 
 class ChocotissueController extends Controller
 {
+    /**
+     * Constructor
+     *
+     * @return void
+     */
     public function __construct(ChocotissueService $chocotissueService)
     {
         $this->chocotissueService = $chocotissueService;
@@ -22,14 +27,14 @@ class ChocotissueController extends Controller
         return self::recommendations($request);
     }
 
-    public function index()
-    {
-        return view('user.chocotissue.index');
-    }
-
+    /**
+     * Timeline
+     *
+     * @return void
+     */
     public function timeline(Request $request)
     {
-        $data = $this->chocotissueService->getTimeline(true);
+        $data = $this->chocotissueService->getTimeline(1);
 
         $data->each(function ($row) {
             echo "<img style=\"width: 18vw;max-height:180px;\" src=\"{$row->tissue->front_show_image_path}\">";
@@ -38,6 +43,11 @@ class ChocotissueController extends Controller
         return view('user.top.index');
     }
 
+    /**
+     * Recommendations
+     *
+     * @return void
+     */
     public function recommendations(Request $request)
     {
         try {
@@ -99,11 +109,13 @@ class ChocotissueController extends Controller
     {
         $displayedChocoShopTableIds = [];
         $displayedNightShopTableIds = [];
+        $page = 1;
+        $prefId = null;
 
-        $data = $this->chocotissueService->getShopRankings($displayedChocoShopTableIds, $displayedNightShopTableIds);
+        $data = $this->chocotissueService->getShopRankings($displayedChocoShopTableIds, $displayedNightShopTableIds, $page, $prefId);
 
         $data->each(function ($row) {
-            echo "<BR><div>{$row->choco_shop_table_id}&{$row->night_shop_table_id}</div>";
+            echo "<BR><div>{$row->choco_shop_table_id} | $row->choco_shop_pref_id & {$row->night_shop_table_id} | $row->night_shop_pref_id </div>";
             $row->tissues->each(function ($tissue) {
                 echo "<img style=\"width: 18vw;max-height:180px;\" src=\"{$tissue->front_show_image_path}\">";
             });
@@ -127,7 +139,7 @@ class ChocotissueController extends Controller
             $isTimeline,
             $chocoShopTableId,
             $nightShopTableId,
-            $page,
+            $page
         );
 
         $data->each(function ($row) {
@@ -162,7 +174,7 @@ class ChocotissueController extends Controller
         $data = $this->chocotissueService->getHashtagDetail(
             $isTimeline,
             $hashtagId,
-            $page,
+            $page
         );
 
         $data->each(function ($row) {

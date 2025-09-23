@@ -8,6 +8,8 @@ class MensTissue extends Model
 {
     protected $table = 'mens_tissue';
 
+    CONST THUMBNAIL_SECOND = '-00003.png';
+
     /**
      * 開放程式碼新增或編輯的欄位
      * 避免誤改其他欄位
@@ -105,5 +107,65 @@ class MensTissue extends Model
         parent::__construct($attributes);
 
         $this->connection = env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat');
+    }
+
+    /**
+     * get image_url with cloud front query string
+     * @return string
+     */
+    public function getImageUrlResizeAttribute()
+    {
+        return $this->image_url . '?o=webp&type=resize&width=1000&height=1000&quality=95';
+    }
+
+    public function getFrontShowImagePathAttribute()
+    {
+        $imageAttributes = json_decode($this->image_attributes, true);
+        $isAutoGenerateGif = $imageAttributes['isAutoGenerateGif'] ?? false;
+
+        $baseUrl = 'https://d1wkjlhn9f2agy.cloudfront.net/mens/twitter';
+        if (!empty($this->movie_url) || (!empty($this->thumbnail_url) && $isAutoGenerateGif === true)) {
+            $baseUrl = 'https://s3-ap-northeast-1.amazonaws.com/encodedevfiles.chocolat.work/mens/twitter';
+        }
+
+        $fileName = '';
+        if (!empty($this->image_url)) {
+            $fileName = $this->image_url_resize;
+        } elseif (!empty($this->original['thumbnail_url'])) {
+            $fileName = $this->original['thumbnail_url'];
+        } elseif (!empty($this->original['movie_url'])) {
+            $imageName = explode('.', $this->original['movie_url'])[0];
+            $fileName = $imageName . self::THUMBNAIL_SECOND;
+        }
+
+        $filePath = '';
+        switch (true) {
+            case !empty($this->old_mypage_id):
+                $filePath = "mypage/{$this->old_mypage_id}";
+                break;
+            case !empty($this->old_staff_id):
+                $filePath = "staff/{$this->old_staff_id}";
+                break;
+            case !empty($this->mypage_id):
+                $filePath = "mypage/{$this->mypage_id}";
+                break;
+            case !empty($this->staff_id):
+                $filePath = "staff/{$this->staff_id}";
+                break;
+            case !empty($this->night_mypage_id):
+                $filePath = "night-mypage/{$this->night_mypage_id}";
+                break;
+            case !empty($this->guest_id):
+                $filePath = "guest/{$this->guest_id}";
+                break;
+            case !empty($this->shop_id):
+                $filePath = "{$this->shop_id}";
+                break;
+            case !empty($this->night_shop_id):
+                $filePath = "night-shop/{$this->night_shop_id}";
+                break;
+        }
+
+        return "{$baseUrl}/{$filePath}/{$fileName}";
     }
 }

@@ -2,8 +2,6 @@
 
 namespace App\Traits\Chocotissue;
 
-use Carbon\Carbon;
-
 trait ExcludedUsers
 {
     protected function excludedChocoGuests()

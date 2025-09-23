@@ -54,7 +54,7 @@ class UserTopTissueQueryBuilder
                         WHEN night_casts.id IS NOT NULL
                             THEN night_casts.shop_id
                     END AS night_shop_table_id
-                "),
+                ")
             )
             ->leftJoin('casts AS choco_casts', 'choco_casts.id', '=', 'tissues.cast_id')
             ->leftJoin('yoasobi_casts AS night_casts', 'night_casts.id', '=', 'tissues.night_cast_id')
@@ -74,16 +74,17 @@ class UserTopTissueQueryBuilder
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
             ->fromSub($userTissueQuery, 'tissues')
-                ->crossJoin(DB::raw('(SELECT @test:=NULL, @num:=0) vars'))
-                ->select(
-                    'tissues.*',
-                    DB::raw('@num := IF(@test = tissues.user_id_for_grouping, @num := @num + 1, 1) AS show_num'),
-                    DB::raw('@test := tissues.user_id_for_grouping AS user_id_current')
-                )
-                ->orderBy('tissues.user_id_for_grouping', 'ASC')
-                ->orderBy('tissues.set_top_status', 'DESC')
-                ->orderBy(DB::raw('tissues.good_count + tissues.add_good_count'), 'DESC')
-                ->orderBy('tissues.view_count', 'DESC');
+            ->select(
+                'tissues.*',
+                DB::raw('
+                    ROW_NUMBER() OVER (
+                        PARTITION BY user_id_for_grouping
+                        ORDER BY
+                            (good_count + add_good_count) DESC,
+                            view_count DESC
+                    ) as show_num
+                ')
+            );
     }
 
     public function buildShopRankingOrderTissueQuery(
@@ -107,23 +108,5 @@ class UserTopTissueQueryBuilder
                         release_date
                 END
             )"), "DESC");
-    }
-
-    public function buildShopRankingDetailOrderTissueQuery(
-        QueryBuilder $userTissueQuery
-    ): QueryBuilder {
-        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
-            ->query()
-            ->fromSub($userTissueQuery, 'tissues')
-                ->crossJoin(DB::raw('(SELECT @test:=NULL, @num:=0) vars'))
-                ->select(
-                    'tissues.*',
-                    DB::raw('@num := IF(@test = tissues.user_id_for_grouping, @num := @num + 1, 1) AS show_num'),
-                    DB::raw('@test := tissues.user_id_for_grouping AS user_id_current')
-                )
-                ->orderBy('tissues.user_id_for_grouping', 'ASC')
-                // ->orderBy('tissues.set_top_status', 'DESC')
-                ->orderBy(DB::raw('tissues.good_count + tissues.add_good_count'), 'DESC')
-                ->orderBy('user_tissues.view_count', 'DESC');
     }
 }
