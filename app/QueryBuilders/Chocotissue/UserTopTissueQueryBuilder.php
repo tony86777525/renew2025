@@ -80,6 +80,7 @@ class UserTopTissueQueryBuilder
                     ROW_NUMBER() OVER (
                         PARTITION BY user_id_for_grouping
                         ORDER BY
+                            CASE WHEN set_top_status > 0 THEN 1 ELSE 0 END DESC,
                             (good_count + add_good_count) DESC,
                             view_count DESC
                     ) as show_num
@@ -108,5 +109,24 @@ class UserTopTissueQueryBuilder
                         release_date
                 END
             )"), "DESC");
+    }
+
+    public function buildShopRankingDetailOrderTissueQuery(
+        QueryBuilder $userTissueQuery
+    ): QueryBuilder {
+        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+            ->query()
+            ->fromSub($userTissueQuery, 'tissues')
+            ->select(
+                'tissues.*',
+                DB::raw('
+                    ROW_NUMBER() OVER (
+                        PARTITION BY user_id_for_grouping
+                        ORDER BY
+                            (good_count + add_good_count) DESC,
+                            view_count DESC
+                    ) as show_num
+                ')
+            );
     }
 }

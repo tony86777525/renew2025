@@ -119,6 +119,51 @@ class TissueRepository
         return $query->get();
     }
 
+    public function getShopRankingDetailTopTissueOfUsers(
+        array $chocoCastIds,
+        array $nightCastIds,
+        array $chocoMypageIds,
+        array $chocoGuestIds
+    ): \Illuminate\Database\Eloquent\Collection {
+        $startDate = $this->championshipStartDatetime();
+        $endDate = $this->nowDatetime();
+
+        $tissueQuery = $this->buildUserTissueQuery(
+            $startDate,
+            $endDate,
+            $this->excludedChocoCasts(),
+            $this->excludedChocoGuests()
+        );
+        $chocoMypageQuery = $this->buildChocoMypageQuery();
+        $chocoGuestQuery = $this->buildChocoGuestQuery();
+
+        $build = new UserTopTissueQueryBuilder;
+        $userTissueQuery = $build->buildUserTissueQuery($tissueQuery, $chocoMypageQuery, $chocoGuestQuery);
+        $orderTissues = $build->buildShopRankingDetailOrderTissueQuery($userTissueQuery);
+
+        $query = Tissue::query()
+            ->fromSub($orderTissues, 'tissues')
+            ->select('*')
+            ->where('tissues.show_num', DB::raw(1))
+            ->where(function ($query) use ($chocoCastIds, $nightCastIds, $chocoMypageIds, $chocoGuestIds) {
+                $query
+                    ->when(!empty($chocoCastIds), function ($query) use ($chocoCastIds) {
+                        $query->whereIn('tissues.user_id_for_choco_cast', $chocoCastIds);
+                    })
+                    ->when(!empty($nightCastIds), function ($query) use ($nightCastIds) {
+                        $query->orWhereIn('tissues.night_cast_id', $nightCastIds);
+                    })
+                    ->when(!empty($chocoMypageIds), function ($query) use ($chocoMypageIds) {
+                        $query->orWhereIn('tissues.mypage_id', $chocoMypageIds);
+                    })
+                    ->when(!empty($chocoGuestIds), function ($query) use ($chocoGuestIds) {
+                        $query->orWhereIn('tissues.guest_id', $chocoGuestIds);
+                    });
+            });
+
+        return $query->get();
+    }
+
     public function getHashtagTopTissueOfUsers(
         array $hashtagIds
     ): \Illuminate\Database\Eloquent\Collection {

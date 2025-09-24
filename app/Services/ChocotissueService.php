@@ -235,7 +235,44 @@ class ChocotissueService
                 $limit,
                 $offset
             );
-            return $this->enrichUserDataWithTissues($data);
+
+            if ($data->isEmpty()) {
+                return collect([]);
+            }
+
+            $chocoCastIds = $data->pluck('choco_cast_id')->filter()->toArray();
+            $nightCastIds = $data->pluck('night_cast_id')->filter()->toArray();
+            $chocoMypageIds = $data->pluck('choco_mypage_id')->filter()->toArray();
+            $chocoGuestIds = $data->pluck('choco_guest_id')->filter()->toArray();
+
+            if (empty($chocoCastIds) && empty($nightCastIds) && empty($chocoMypageIds) && empty($chocoGuestIds)) {
+                return collect([]);
+            }
+
+            $tissues = $this->tissueRepository->getShopRankingDetailTopTissueOfUsers(
+                $chocoCastIds,
+                $nightCastIds,
+                $chocoMypageIds,
+                $chocoGuestIds
+            );
+
+            if ($tissues->isEmpty()) {
+                return collect([]);
+            }
+
+            $data->each(function ($row) use ($tissues) {
+                if (!empty($row->choco_cast_id)) {
+                    $row->tissue = $tissues->firstWhere('user_id_for_choco_cast', $row->choco_cast_id);
+                } elseif (!empty($row->night_cast_id)) {
+                    $row->tissue = $tissues->firstWhere('night_cast_id', $row->night_cast_id);
+                } elseif (!empty($row->choco_mypage_id)) {
+                    $row->tissue = $tissues->firstWhere('mypage_id', $row->choco_mypage_id);
+                } elseif (!empty($row->choco_guest_id)) {
+                    $row->tissue = $tissues->firstWhere('guest_id', $row->choco_guest_id);
+                }
+            });
+
+            return $data;
         }
     }
 
