@@ -19,6 +19,8 @@ class Tissue extends Model
      */
     const TISSUE_FROM_TYPE_GIRL_MYPAGE = 'GIRL_MYPAGE';
     const TISSUE_FROM_TYPE_GIRL_GUEST = 'GIRL_GUEST';
+    const TISSUE_FROM_TYPE_GIRL_CAST = 'GIRL_CAST';
+    const TISSUE_FROM_TYPE_GIRL_NIGHT_CAST = 'GIRL_NIGHT_CAST';
     const TISSUE_FROM_TYPE_GIRL_SHOP = 'GIRL_SHOP';
     const TISSUE_FROM_TYPE_GIRL_NIGHT_SHOP = 'GIRL_NIGHT_SHOP';
     const TISSUE_FROM_TYPE_MEN_CAST = 'MEN_CAST';
@@ -243,5 +245,39 @@ class Tissue extends Model
         }
 
         return "{$baseUrl}/{$filePath}/{$fileName}";
+    }
+
+    public function getUserTypeAttribute()
+    {
+        if (!empty($this->mypage_id)) {
+            return self::TISSUE_FROM_TYPE_GIRL_MYPAGE;
+        }
+
+        if (!empty($this->cast_id)) {
+            return self::TISSUE_FROM_TYPE_GIRL_CAST;
+        }
+
+        if (!empty($this->night_cast_id)) {
+            return self::TISSUE_FROM_TYPE_GIRL_NIGHT_CAST;
+        }
+
+        return self::TISSUE_FROM_TYPE_GIRL_GUEST;
+    }
+
+    public function getUserIdAttribute()
+    {
+        if (!empty($this->mypage_id)) {
+            return $this->mypage_id;
+        }
+
+        if (!empty($this->cast_id)) {
+            return $this->cast_id;
+        }
+
+        if (!empty($this->night_cast_id)) {
+            return$this->night_cast_id;
+        }
+
+        return $this->guest_id;
     }
 }

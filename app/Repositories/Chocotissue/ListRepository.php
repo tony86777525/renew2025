@@ -125,69 +125,6 @@ class ListRepository
         return $query->get();
     }
 
-    public function getUserWeeklyRankings(
-        int $limit,
-        int $offset = 0,
-        int $prefId = null
-    ): \Illuminate\Support\Collection {
-        $startDate = $this->championshipStartDatetime();
-        $endDate = $this->nowDatetime();
-        $weekStartDate = $this->weekStartDate();
-        $lastWeekStartDate = $this->lastWeekStartDate();
-
-        $tissueQuery = $this->buildUserTissueQuery(
-            $startDate,
-            $endDate,
-            $this->excludedChocoCasts(),
-            $this->excludedChocoGuests()
-        );
-        $weeklyRankingPointQuery = $this->buildWeeklyRankingPointQuery($lastWeekStartDate);
-        $chocoMypageQuery = $this->buildChocoMypageQuery();
-        $chocoGuestQuery = $this->buildChocoGuestQuery();
-        $chocoShopQuery = $this->buildChocoShopQuery();
-        $nightShopQuery = $this->buildNightShopQuery();
-
-        $userScoreQuery = (new UserScoreQueryBuilder)->build(
-            $tissueQuery,
-            $weeklyRankingPointQuery,
-            $chocoMypageQuery,
-            $chocoGuestQuery,
-            $weekStartDate
-        );
-
-        $query = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
-            ->query()
-            ->fromSub($userScoreQuery, 'user_scores')
-            ->leftJoinSub($chocoShopQuery, 'choco_shops', 'choco_shops.id', '=', 'user_scores.choco_shop_table_id')
-            ->leftJoinSub($nightShopQuery, 'night_shops', 'night_shops.id', '=', 'user_scores.night_shop_table_id')
-            ->select(
-                "user_scores.choco_cast_id",
-                "choco_shops.id AS choco_shop_table_id",
-                "choco_shops.pref_id AS choco_shop_pref_id",
-                "user_scores.night_cast_id",
-                "night_shops.id AS night_shop_table_id",
-                "night_shops.pref_id AS night_shop_pref_id",
-                "user_scores.choco_mypage_id",
-                "user_scores.choco_guest_id",
-                "user_scores.point",
-                "user_scores.total_good_count",
-                "user_scores.tissue_count",
-                "user_scores.last_tissue_id"
-            )
-            ->when(isset($prefId) && !empty($prefId), function ($query) use ($prefId) {
-                $query
-                    ->where('choco_shops.pref_id', $prefId)
-                    ->orWhere('night_shops.pref_id', $prefId);
-            })
-            ->orderBy('user_scores.total_good_count', 'DESC')
-            ->orderBy('user_scores.tissue_count', 'DESC')
-            ->orderBy('user_scores.last_tissue_id', 'DESC')
-            ->skip($offset)
-            ->take($limit);
-
-        return $query->get();
-    }
-
     public function getUserRankings(
         int $limit,
         int $offset = 0,
@@ -202,36 +139,38 @@ class ListRepository
             $this->excludedChocoCasts(),
             $this->excludedChocoGuests()
         );
-        $rankingPointQuery = $this->buildRankingPointQuery($startDate);
         $chocoMypageQuery = $this->buildChocoMypageQuery();
         $chocoGuestQuery = $this->buildChocoGuestQuery();
         $chocoShopQuery = $this->buildChocoShopQuery();
         $nightShopQuery = $this->buildNightShopQuery();
+        $tissueCommentCountQuery = $this->buildTissueCommentCountQuery();
 
         $userScoreQuery = (new UserScoreQueryBuilder)->build(
             $tissueQuery,
-            $rankingPointQuery,
             $chocoMypageQuery,
             $chocoGuestQuery,
-            $startDate
+            $tissueCommentCountQuery
         );
+
+        $baseQuery = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+            ->query()
+            ->fromSub($userScoreQuery, 'user_scores')
+            ->select(
+                "user_scores.*",
+                DB::raw("IFNULL(user_scores.total_good_count, 0) + IFNULL(user_scores.total_comment_count, 0) + IFNULL(user_scores.total_sns_count, 0) AS point"),
+            );
 
         $query = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->fromSub($userScoreQuery, 'user_scores')
-            ->leftJoinSub($chocoShopQuery, 'choco_shops', 'choco_shops.id', '=', 'user_scores.choco_shop_table_id')
-            ->leftJoinSub($nightShopQuery, 'night_shops', 'night_shops.id', '=', 'user_scores.night_shop_table_id')
+            ->fromSub($baseQuery, 'base_data')
+            ->leftJoinSub($chocoShopQuery, 'choco_shops', 'choco_shops.id', '=', 'base_data.choco_shop_table_id')
+            ->leftJoinSub($nightShopQuery, 'night_shops', 'night_shops.id', '=', 'base_data.night_shop_table_id')
             ->select(
-                "user_scores.choco_cast_id",
+                "base_data.*",
                 "choco_shops.id AS choco_shop_table_id",
                 "choco_shops.pref_id AS choco_shop_pref_id",
-                "user_scores.night_cast_id",
                 "night_shops.id AS night_shop_table_id",
                 "night_shops.pref_id AS night_shop_pref_id",
-                "user_scores.choco_mypage_id",
-                "user_scores.choco_guest_id",
-                "user_scores.point",
-                "user_scores.last_tissue_id"
             )
             ->when(isset($prefId) && !empty($prefId), function ($query) use ($prefId) {
                 $query->where(function ($query) use ($prefId) {
@@ -240,8 +179,8 @@ class ListRepository
                         ->orWhere('night_shops.pref_id', $prefId);
                 });
             })
-            ->orderBy('user_scores.point', 'DESC')
-            ->orderBy('user_scores.last_tissue_id', 'DESC')
+            ->orderBy('base_data.point', 'DESC')
+            ->orderBy('base_data.total_view_count', 'DESC')
             ->skip($offset)
             ->take($limit);
 

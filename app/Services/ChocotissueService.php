@@ -96,24 +96,6 @@ class ChocotissueService
         }
     }
 
-    public function getUserWeeklyRankings(
-        int $page = 1,
-        int $prefId = null
-    ): \Illuminate\Support\Collection {
-        $this->validatePage($page);
-
-        $limit = 30;
-        $offset = ($page - 1) * $limit;
-
-        $data = $this->listRepository->getUserWeeklyRankings($limit, $offset, $prefId);
-
-        if ($data->isEmpty()) {
-            return collect([]);
-        }
-
-        return $this->enrichUserDataWithTissues($data);
-    }
-
     public function getUserRankings(
         int $page = 1,
         int $prefId = null

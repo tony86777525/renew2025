@@ -84,22 +84,18 @@ class ChocotissueController extends Controller
         }
     }
 
-    public function userWeeklyRankings()
-    {
-        $data = $this->chocotissueService->getUserWeeklyRankings();
-        $data->each(function ($row) {
-            echo "<img style=\"width: 18vw;max-height:180px;\" src=\"{$row->tissue->front_show_image_path}\">";
-            // echo "{$row->tissue->front_show_image_path}<BR>";
-        });
-        exit;
-        return view('user.top.index');
-    }
-
     public function userRankings()
     {
         $data = $this->chocotissueService->getUserRankings();
         $data->each(function ($row) {
-            echo "<img style=\"width: 18vw;max-height:180px;\" src=\"{$row->tissue->front_show_image_path}\">";
+            echo "<div style=\"display: inline-flex;flex-direction: row;align-items: flex-start;flex-wrap: wrap;position: relative;\">
+<div style=\"width: 18vw;\">
+<div>User: {$row->tissue->user_type}</div>
+<div>User ID: <span style=\"color: red;\">{$row->tissue->user_id}</span></div>
+<div>Point: {$row->point}</div>
+<img style=\"max-height:262px;max-width:200px;\" src=\"{$row->tissue->front_show_image_path}\">
+</div>
+</div>";
         });
         exit;
         return view('user.top.index');
