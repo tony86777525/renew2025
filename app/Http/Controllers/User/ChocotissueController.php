@@ -52,9 +52,9 @@ class ChocotissueController extends Controller
     {
         try {
             $data = $this->chocotissueService->getRecommendations(
-                $request->boolean('is_pc', true),
-                $request->integer('page', 1),
-                $request->integer('pref_id', null)
+                $request->get('is_pc', true),
+                $request->get('page', 1),
+                $request->get('pref_id', null)
             );
 
             $data->each(function ($row) {
