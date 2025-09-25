@@ -143,21 +143,20 @@ class ListRepository
         $chocoGuestQuery = $this->buildChocoGuestQuery();
         $chocoShopQuery = $this->buildChocoShopQuery();
         $nightShopQuery = $this->buildNightShopQuery();
-        $tissueCommentCountQuery = $this->buildTissueCommentCountQuery();
+        $rankingPointQuery = $this->buildRankingPointQuery($startDate);
 
         $userScoreQuery = (new UserScoreQueryBuilder)->build(
             $tissueQuery,
             $chocoMypageQuery,
             $chocoGuestQuery,
-            $tissueCommentCountQuery
+            $rankingPointQuery
         );
 
         $baseQuery = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
             ->fromSub($userScoreQuery, 'user_scores')
             ->select(
-                "user_scores.*",
-                DB::raw("IFNULL(user_scores.total_good_count, 0) + IFNULL(user_scores.total_comment_count, 0) + IFNULL(user_scores.total_sns_count, 0) AS point"),
+                "user_scores.*"
             );
 
         $query = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
@@ -180,7 +179,7 @@ class ListRepository
                 });
             })
             ->orderBy('base_data.point', 'DESC')
-            ->orderBy('base_data.total_view_count', 'DESC')
+            ->orderBy('base_data.last_tissue_id', 'DESC')
             ->skip($offset)
             ->take($limit);
 

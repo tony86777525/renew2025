@@ -244,46 +244,21 @@ trait CommonQueries
             });
     }
 
-    protected function buildTissueCommentCountQuery()
+    protected function buildRankingPointQuery(Carbon $date)
     {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->from((new TissueComment())->getTable(), 'tissue_comments')
-            ->rightJoin('tissue_comment AS master_tissue_comments', 'master_tissue_comments.id', '=', 'tissue_comments.master_comment_id')
+            ->from((new RankingPoint)->getTable())
             ->select(
-                DB::raw('COUNT(*)')
+                'choco_cast_id',
+                'night_cast_id',
+                DB::raw("CASE WHEN tissue_from_type = '" . Tissue::TISSUE_FROM_TYPE_GIRL_MYPAGE . "' THEN post_user_id END AS choco_mypage_id"),
+                DB::raw("CASE WHEN tissue_from_type = '" . Tissue::TISSUE_FROM_TYPE_GIRL_GUEST . "' THEN post_user_id END AS choco_guest_id"),
+                'tissue_from_type',
+                'total_point AS point',
+                DB::raw("chocolat_tissue_count + yoasobi_tissue_count AS tissue_count")
             )
-            ->whereColumn('tissues.id', 'tissue_comments.tissue_id')
-            ->where(function ($query) {
-                $query
-                    ->where('tissue_comments.del', DB::raw(0))
-                    ->orWhereNotNull('tissue_comments.del');
-            })
-            ->where(function ($query) {
-                $query
-                    ->where('master_tissue_comments.del', DB::raw(0))
-                    ->orWhereNotNull('master_tissue_comments.del');
-            })
-            ->where(function ($query) {
-                $query
-                    ->whereNotNull('tissues.cast_id')
-                    ->where(function ($query) {
-                        $query
-                            ->whereNull('tissue_comments.cast_id')
-                            ->orWhereColumn('tissue_comments.cast_id', '!=', 'tissues.cast_id');
-                    })
-                    ->orWhereNotNull('tissues.night_cast_id')
-                    ->where(function ($query) {
-                        $query
-                            ->whereNull('tissue_comments.night_cast_id')
-                            ->orWhereColumn('tissue_comments.night_cast_id', '!=', 'tissues.night_cast_id');
-                    })
-                    ->orWhereNotNull('tissues.mypage_id')
-                    ->where(function ($query) {
-                        $query
-                            ->whereNull('tissue_comments.mypage_id')
-                            ->orWhereColumn('tissue_comments.mypage_id', '!=', 'tissues.mypage_id');
-                    });
-            });
+            ->where('is_valid', '=', DB::raw('1'))
+            ->where('championship_start_date', $date);
     }
 }

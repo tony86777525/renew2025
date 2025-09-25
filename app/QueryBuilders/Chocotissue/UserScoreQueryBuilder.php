@@ -13,7 +13,7 @@ class UserScoreQueryBuilder
         QueryBuilder $tissueQuery,
         QueryBuilder $chocoMypageQuery,
         QueryBuilder $chocoGuestQuery,
-        QueryBuilder $tissueCommentCountQuery,
+        QueryBuilder $weeklyOrTotalRankingPointQuery,
     ): QueryBuilder {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
@@ -23,6 +23,10 @@ class UserScoreQueryBuilder
             ->leftJoin('casts AS night_casts_binding_choco_casts', 'night_casts_binding_choco_casts.town_night_cast_id', '=', 'night_casts.id')
             ->leftJoinSub($chocoMypageQuery, 'choco_mypages', 'choco_mypages.id', '=', 'tissues.mypage_id')
             ->leftJoinSub($chocoGuestQuery, 'choco_guests', 'choco_guests.id', '=', 'tissues.guest_id')
+            ->leftJoinSub($weeklyOrTotalRankingPointQuery, 'choco_cast_weekly_ranking_points', 'choco_cast_weekly_ranking_points.choco_cast_id', '=', 'choco_casts.id')
+            ->leftJoinSub($weeklyOrTotalRankingPointQuery, 'night_cast_weekly_ranking_points', 'night_cast_weekly_ranking_points.night_cast_id', '=', 'night_casts.id')
+            ->leftJoinSub($weeklyOrTotalRankingPointQuery, 'choco_mypage_weekly_ranking_points', 'choco_mypage_weekly_ranking_points.choco_mypage_id', '=', 'choco_mypages.id')
+            ->leftJoinSub($weeklyOrTotalRankingPointQuery, 'choco_guest_weekly_ranking_points', 'choco_guest_weekly_ranking_points.choco_guest_id', '=', 'choco_guests.id')
             ->select(
                 DB::raw("MAX(choco_casts.id) AS choco_cast_id"),
                 DB::raw("MAX(night_casts.id) AS night_cast_id "),
@@ -30,10 +34,26 @@ class UserScoreQueryBuilder
                 DB::raw("MAX(choco_guests.id) AS choco_guest_id"),
                 DB::raw("MAX(COALESCE(night_casts_binding_choco_casts.shop_table_id, choco_casts.shop_table_id)) AS choco_shop_table_id"),
                 DB::raw("MAX(night_casts.shop_id) AS night_shop_table_id"),
-                DB::raw("SUM(tissues.sns_count) AS total_sns_count"),
                 DB::raw("SUM(tissues.good_count + tissues.add_good_count) AS total_good_count"),
-                DB::raw("SUM(({$tissueCommentCountQuery->toSql()})) AS total_comment_count"),
-                DB::raw("SUM(tissues.view_count) AS total_view_count")
+                DB::raw("
+                    COALESCE(
+                        MAX(choco_cast_weekly_ranking_points.point),
+                        MAX(night_cast_weekly_ranking_points.point),
+                        MAX(choco_mypage_weekly_ranking_points.point),
+                        MAX(choco_guest_weekly_ranking_points.point),
+                        0
+                    ) AS point
+                "),
+                DB::raw("
+                    COALESCE(
+                        MAX(choco_cast_weekly_ranking_points.tissue_count),
+                        MAX(night_cast_weekly_ranking_points.tissue_count),
+                        MAX(choco_mypage_weekly_ranking_points.tissue_count),
+                        MAX(choco_guest_weekly_ranking_points.tissue_count),
+                        0
+                    ) AS tissue_count
+                "),
+                DB::raw("MAX(tissues.id) AS last_tissue_id")
             )
             ->whereNotNull('choco_casts.id')
             ->orWhereNotNull('night_casts.id')
