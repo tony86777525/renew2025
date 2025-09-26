@@ -47,12 +47,6 @@ class ShopRankingQueryBuilder
             ->fromSub(
                 DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
                     ->query()
-                    ->fromSub($tissueQuery, 'tissues')
-                    ->leftJoin('casts AS choco_casts', 'choco_casts.id', '=', 'tissues.cast_id')
-                    ->leftJoin('yoasobi_casts AS night_casts', 'night_casts.id', '=', 'tissues.night_cast_id')
-                    ->leftJoin('casts AS night_casts_binding_choco_casts', 'night_casts_binding_choco_casts.town_night_cast_id', '=', 'night_casts.id')
-                    ->leftJoinSub($rankingPointQuery, 'choco_cast_ranking_points', 'choco_cast_ranking_points.choco_cast_id', '=', 'choco_casts.id')
-                    ->leftJoinSub($rankingPointQuery, 'night_cast_ranking_points', 'night_cast_ranking_points.night_cast_id', '=', 'night_casts.id')
                     ->select(
                         DB::raw("MAX(choco_casts.id) AS choco_cast_id"),
                         DB::raw("MAX(night_casts.id)  AS night_cast_id"),
@@ -60,8 +54,14 @@ class ShopRankingQueryBuilder
                         DB::raw("MAX(night_casts.shop_id) AS night_shop_table_id"),
                         DB::raw("COUNT(tissues.id) AS tissue_count"),
                         DB::raw("MAX(COALESCE(choco_cast_ranking_points.point, night_cast_ranking_points.point, 0)) AS point"),
-                        DB::raw("MAX(tissues.id) AS id")
+                        DB::raw("MAX(tissues.id) AS id"),
                     )
+                    ->fromSub($tissueQuery, 'tissues')
+                    ->leftJoin('casts AS choco_casts', 'choco_casts.id', '=', 'tissues.cast_id')
+                    ->leftJoin('yoasobi_casts AS night_casts', 'night_casts.id', '=', 'tissues.night_cast_id')
+                    ->leftJoin('casts AS night_casts_binding_choco_casts', 'night_casts_binding_choco_casts.town_night_cast_id', '=', 'night_casts.id')
+                    ->leftJoinSub($rankingPointQuery, 'choco_cast_ranking_points', 'choco_cast_ranking_points.choco_cast_id', '=', 'choco_casts.id')
+                    ->leftJoinSub($rankingPointQuery, 'night_cast_ranking_points', 'night_cast_ranking_points.night_cast_id', '=', 'night_casts.id')
                     ->groupBy(DB::raw("
                         CASE
                             WHEN night_casts_binding_choco_casts.id IS NOT NULL THEN
