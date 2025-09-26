@@ -21,9 +21,9 @@ trait CommonQueries
     {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
+            ->select('mypage_mains.id')
             ->from((new MypageMain)->getTable())
             ->rightJoin('mypages', 'mypages.id', '=', 'mypage_mains.id')
-            ->select('mypage_mains.id')
             ->where('mypages.is_usable', DB::raw(1))
             ->where('mypage_mains.active_flg', DB::raw(1));
     }
@@ -32,8 +32,8 @@ trait CommonQueries
     {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->from((new Guest)->getTable())
             ->select('id')
+            ->from((new Guest)->getTable())
             ->where('hide_flg', DB::raw(0));
     }
 
@@ -41,31 +41,30 @@ trait CommonQueries
     {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->from((new ShopMain)->getTable())
-            ->rightJoin('area_prefs', 'area_prefs.area_id', 'shop_mains.pref_id')
             ->select(
                 'shop_mains.id',
                 'area_prefs.area_id AS pref_id'
-            );
+            )
+            ->from((new ShopMain)->getTable())
+            ->rightJoin('area_prefs', 'area_prefs.area_id', 'shop_mains.pref_id');
     }
 
     protected function buildNightShopQuery()
     {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->from((new YoasobiShopsAll)->getTable())
-            ->rightJoin('area_prefs', 'area_prefs.area_id', 'yoasobi_shops_all.prefecture_id')
             ->select(
                 'yoasobi_shops_all.id',
                 'area_prefs.area_id AS pref_id'
-            );
+            )
+            ->from((new YoasobiShopsAll)->getTable())
+            ->rightJoin('area_prefs', 'area_prefs.area_id', 'yoasobi_shops_all.prefecture_id');
     }
 
     protected function buildWeeklyRankingPointQuery(Carbon $date)
     {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->from((new WeeklyRankingPoint)->getTable())
             ->select(
                 'choco_cast_id',
                 'night_cast_id',
@@ -85,6 +84,7 @@ trait CommonQueries
                 'point',
                 'tissue_count'
             )
+            ->from((new WeeklyRankingPoint)->getTable())
             ->where('is_aggregated', '=', DB::raw('1'))
             ->where('ranking_cumulative_start_date', $date);
     }
@@ -93,8 +93,8 @@ trait CommonQueries
     {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->from((new RankingPoint)->getTable())
             ->select(
+                'id',
                 'choco_cast_id',
                 'night_cast_id',
                 DB::raw("CASE WHEN tissue_from_type = '" . Tissue::TISSUE_FROM_TYPE_GIRL_MYPAGE . "' THEN post_user_id END AS choco_mypage_id"),
@@ -103,6 +103,7 @@ trait CommonQueries
                 'total_point AS point',
                 DB::raw("chocolat_tissue_count + yoasobi_tissue_count AS tissue_count")
             )
+            ->from((new RankingPoint)->getTable())
             ->where('is_valid', '=', DB::raw('1'))
             ->where('championship_start_date', $date);
     }
@@ -125,20 +126,8 @@ trait CommonQueries
     ) {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
+            ->select('*')
             ->from((new Tissue)->getTable(), 'tissues')
-            ->select(
-                '*'
-                // 'id',
-                // 'cast_id',
-                // 'night_cast_id',
-                // 'mypage_id',
-                // 'guest_id',
-                // 'good_count',
-                // 'add_good_count',
-                // 'view_count',
-                // 'set_top_status',
-                // 'release_date'
-            )
             ->where('published_flg', DB::raw(Tissue::PUBLISHED_FLG_TRUE))
             ->where('tissue_status', DB::raw(Tissue::TISSUE_STATUS_NORMAL))
             ->whereBetween('release_date', [$startDate, $endDate])
@@ -169,7 +158,6 @@ trait CommonQueries
     ) {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->from((new Tissue)->getTable(), 'tissues')
             ->select(
                 'id',
                 'cast_id',
@@ -180,6 +168,7 @@ trait CommonQueries
                 'set_top_status',
                 'release_date'
             )
+            ->from((new Tissue)->getTable(), 'tissues')
             ->where('published_flg', DB::raw(Tissue::PUBLISHED_FLG_TRUE))
             ->where('tissue_status', DB::raw(Tissue::TISSUE_STATUS_NORMAL))
             ->whereBetween('release_date', [$startDate, $endDate])
@@ -197,12 +186,12 @@ trait CommonQueries
     {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->from((new Tissue)->getTable(), 'tissues')
             ->select(
                 'id',
                 'cast_id',
                 'night_cast_id'
             )
+            ->from((new Tissue)->getTable(), 'tissues')
             ->where('published_flg', DB::raw(Tissue::PUBLISHED_FLG_TRUE))
             ->where('tissue_status', DB::raw(Tissue::TISSUE_STATUS_NORMAL))
             ->whereBetween('release_date', [$startDate, $endDate])
@@ -213,42 +202,45 @@ trait CommonQueries
             });
     }
 
-    protected function buildTissueCommentLastOneQuery()
+    protected function buildTissueCommentQuery()
     {
+        $tissueCommentQuery = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+            ->query()
+            ->from((new TissueComment)->getTable(), 'tissue_comments')
+            ->where('del', DB::raw(0));
+
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->from((new TissueComment)->getTable())
-            ->select(
-                DB::raw('MIN(tissue_comment.created_at) AS created_at')
-            )
+            ->select('tissue_comments.*')
+            ->fromSub($tissueCommentQuery, 'tissue_comments')
             ->leftJoin(
-                'tissue_comment AS master_tissue_comment',
-                'master_tissue_comment.id',
+                'tissue_comment AS master_tissue_comments',
+                'master_tissue_comments.id',
                 '=',
-                'tissue_comment.master_comment_id'
+                'tissue_comments.master_comment_id'
             )
-            ->whereColumn('tissues.id', 'tissue_comment.tissue_id')
-            ->whereRaw('IFNULL(tissue_comment.del, 0) = 0')
-            ->whereRaw('IFNULL(tissue_comment.master_comment_id, 0) = 0')
-            ->whereRaw('IFNULL(tissue_comment.reply_comment_id, 0) = 0')
-            ->groupBy([
-                'tissue_comment.mypage_id',
-                'tissue_comment.cast_id',
-                'tissue_comment.night_mypage_id',
-                'tissue_comment.night_cast_id',
-                'tissue_comment.job_mypage_id',
-                'tissue_comment.job_staff_id',
-            ])
-            ->orderBy('created_at', 'DESC')
-            ->limit(1);
+            ->whereNull('master_tissue_comments.id')
+            ->where('master_tissue_comments.del', '=', DB::raw(0));
+    }
+
+    protected function buildTissueCommentLastOneQuery()
+    {
+        $tissueCommentQuery = $this->buildTissueCommentQuery();
+
+        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+            ->query()
+            ->select(
+                'tissue_id',
+                DB::raw('MAX(created_at) AS created_at')
+            )
+            ->fromSub($tissueCommentQuery, 'tissue_comments')
+            ->groupBy('tissue_id');
     }
 
     protected function buildHashtagQuery(array $displayedHashtagIds = [])
     {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->from((new Hashtag)->getTable(), 'hashtags')
-            ->rightJoin('tissue_hashtags', 'hashtags.id', '=', 'tissue_hashtags.hashtag_id')
             ->select(
                 "hashtags.id AS id",
                 "hashtags.name AS name",
@@ -257,6 +249,8 @@ trait CommonQueries
                 "hashtags.add_count AS add_count",
                 'tissue_hashtags.tissue_id AS tissue_id'
             )
+            ->from((new Hashtag)->getTable(), 'hashtags')
+            ->rightJoin('tissue_hashtags', 'hashtags.id', '=', 'tissue_hashtags.hashtag_id')
             ->when(!empty($displayedHashtagIds), function ($query) use ($displayedHashtagIds) {
                 $query->whereNotIn('id', $displayedHashtagIds);
             });

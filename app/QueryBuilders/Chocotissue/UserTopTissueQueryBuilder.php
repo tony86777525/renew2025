@@ -14,7 +14,6 @@ class UserTopTissueQueryBuilder
     ): QueryBuilder {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->fromSub($tissueQuery, 'tissues')
             ->select(
                 'tissues.*',
                 DB::raw("
@@ -56,6 +55,7 @@ class UserTopTissueQueryBuilder
                     END AS night_shop_table_id
                 ")
             )
+            ->fromSub($tissueQuery, 'tissues')
             ->leftJoin('casts AS choco_casts', 'choco_casts.id', '=', 'tissues.cast_id')
             ->leftJoin('yoasobi_casts AS night_casts', 'night_casts.id', '=', 'tissues.night_cast_id')
             ->leftJoin('casts AS night_casts_binding_choco_casts', 'night_casts_binding_choco_casts.town_night_cast_id', '=', 'night_casts.id')
@@ -73,7 +73,6 @@ class UserTopTissueQueryBuilder
     ): QueryBuilder {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->fromSub($userTissueQuery, 'tissues')
             ->select(
                 'tissues.*',
                 DB::raw('
@@ -84,29 +83,40 @@ class UserTopTissueQueryBuilder
                             view_count DESC
                     ) as show_num
                 ')
-            );
+            )
+            ->fromSub($userTissueQuery, 'tissues');
     }
 
     public function buildShopRankingOrderTissueQuery(
-        QueryBuilder $userTissueQuery
+        QueryBuilder $userTissueQuery,
+        QueryBuilder $tissueCommentLastOneQuery
     ): QueryBuilder {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->fromSub($userTissueQuery, 'tissues')
-            ->crossJoin(DB::raw('(SELECT @test:=NULL, @num:=0) vars'))
             ->select(
                 'tissues.*',
-                DB::raw('@num := IF(@test = tissues.user_id_for_grouping, @num := @num + 1, 1) AS show_num'),
-                DB::raw('@test := tissues.user_id_for_grouping AS user_id_current')
+                DB::raw("
+                    ROW_NUMBER() OVER (
+                        PARTITION BY user_id_for_grouping
+                        ORDER BY
+                            (
+                                CASE
+                                    WHEN last_tissue_comments.created_at IS NOT NULL AND last_tissue_comments.created_at > release_date THEN
+                                        last_tissue_comments.created_at
+                                    ELSE
+                                        release_date
+                                END
+                            ) DESC
+                    ) as show_num
+                ")
             )
-            ->orderBy('tissues.user_id_for_grouping', 'ASC')
-            ->orderBy(DB::raw("(
-                CASE
-                    WHEN last_comment_date IS NOT NULL AND last_comment_date > release_date THEN
-                        last_comment_date
-                    ELSE
-                        release_date
-                END
-            )"), "DESC");
+            ->fromSub($userTissueQuery, 'tissues')
+            ->leftJoinSub(
+                $tissueCommentLastOneQuery,
+                'last_tissue_comments',
+                'last_tissue_comments.tissue_id',
+                '=',
+                'tissues.id'
+            );
     }
 }

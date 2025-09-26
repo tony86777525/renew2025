@@ -116,8 +116,16 @@ class ChocotissueController extends Controller
 
         $data->each(function ($row) {
             echo "<BR><div>{$row->choco_shop_table_id} | $row->choco_shop_pref_id & {$row->night_shop_table_id} | $row->night_shop_pref_id </div>";
+            echo "<div>Casts：{$row->cast_ids} </div><BR>";
             $row->tissues->each(function ($tissue) {
-                echo "<img style=\"width: 18vw;max-height:180px;\" src=\"{$tissue->front_show_image_path}\">";
+                echo "<div style=\"display: inline-flex;flex-direction: row;align-items: flex-start;flex-wrap: wrap;position: relative;\">
+<div style=\"width: 18vw;\">
+<div>User: {$tissue->user_type}</div>
+<div>User ID: <span style=\"color: red;\">{$tissue->user_id}</span></div>
+<div>Top Tissue ID: <span style=\"color: red;\">{$tissue->id}</span></div>
+<img style=\"max-height:262px;max-width:200px;\" src=\"{$tissue->front_show_image_path}\">
+</div>
+</div>";
             });
             echo "<BR><BR><BR><BR><BR>";
         });
@@ -131,8 +139,8 @@ class ChocotissueController extends Controller
 
         // $chocoShopTableId = 20124;
         // $nightShopTableId = null;
-        $chocoShopTableId = 7524;
-        $nightShopTableId = 877;
+        $chocoShopTableId = 23130;
+        $nightShopTableId = 8588;
         $page = 1;
 
         $data = $this->chocotissueService->getShopRankingDetail(

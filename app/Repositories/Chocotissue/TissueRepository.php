@@ -94,11 +94,9 @@ class TissueRepository
         $chocoGuestQuery = $this->buildChocoGuestQuery();
         $tissueCommentLastOneQuery = $this->buildTissueCommentLastOneQuery();
 
-        $tissueQuery->addSelect(DB::raw("({$tissueCommentLastOneQuery->toSql()}) AS last_comment_date"));
-
         $build = new UserTopTissueQueryBuilder;
         $userTissueQuery = $build->buildUserTissueQuery($tissueQuery, $chocoMypageQuery, $chocoGuestQuery);
-        $orderTissues = $build->buildShopRankingOrderTissueQuery($userTissueQuery);
+        $orderTissues = $build->buildShopRankingOrderTissueQuery($userTissueQuery, $tissueCommentLastOneQuery);
 
         $orderTissues
             ->where(function ($query) use ($chocoShopTableIds, $nightShopTableIds) {
@@ -135,8 +133,6 @@ class TissueRepository
         $chocoGuestQuery = $this->buildChocoGuestQuery();
         $tissueCommentLastOneQuery = $this->buildTissueCommentLastOneQuery();
 
-        $tissueQuery->addSelect(DB::raw("({$tissueCommentLastOneQuery->toSql()}) AS last_comment_date"));
-
         $tissueQuery = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
             ->fromSub($tissueQuery, 'tissues')
@@ -145,13 +141,20 @@ class TissueRepository
                 DB::raw("
                     (
                         CASE
-                            WHEN tissues.last_comment_date IS NOT NULL THEN
-                                tissues.last_comment_date
+                            WHEN last_tissue_comments.created_at IS NOT NULL THEN
+                                last_tissue_comments.created_at
                             ELSE
                                 tissues.release_date
                         END
                     ) AS last_update_datetime
                 ")
+            )
+            ->leftJoinSub(
+                $tissueCommentLastOneQuery,
+                'last_tissue_comments',
+                'last_tissue_comments.tissue_id',
+                '=',
+                'tissues.id'
             );
 
         $tissueShowNumQuery = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))

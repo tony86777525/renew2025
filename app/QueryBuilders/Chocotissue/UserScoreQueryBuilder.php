@@ -18,16 +18,6 @@ class UserScoreQueryBuilder
     ): QueryBuilder {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->fromSub($tissueQuery, 'tissues')
-            ->leftJoin('casts AS choco_casts', 'choco_casts.id', '=', 'tissues.cast_id')
-            ->leftJoin('yoasobi_casts AS night_casts', 'night_casts.id', '=', 'tissues.night_cast_id')
-            ->leftJoin('casts AS night_casts_binding_choco_casts', 'night_casts_binding_choco_casts.town_night_cast_id', '=', 'night_casts.id')
-            ->leftJoinSub($chocoMypageQuery, 'choco_mypages', 'choco_mypages.id', '=', 'tissues.mypage_id')
-            ->leftJoinSub($chocoGuestQuery, 'choco_guests', 'choco_guests.id', '=', 'tissues.guest_id')
-            ->leftJoinSub($weeklyOrTotalRankingPointQuery, 'choco_cast_weekly_ranking_points', 'choco_cast_weekly_ranking_points.choco_cast_id', '=', 'choco_casts.id')
-            ->leftJoinSub($weeklyOrTotalRankingPointQuery, 'night_cast_weekly_ranking_points', 'night_cast_weekly_ranking_points.night_cast_id', '=', 'night_casts.id')
-            ->leftJoinSub($weeklyOrTotalRankingPointQuery, 'choco_mypage_weekly_ranking_points', 'choco_mypage_weekly_ranking_points.choco_mypage_id', '=', 'choco_mypages.id')
-            ->leftJoinSub($weeklyOrTotalRankingPointQuery, 'choco_guest_weekly_ranking_points', 'choco_guest_weekly_ranking_points.choco_guest_id', '=', 'choco_guests.id')
             ->select(
                 DB::raw("MAX(choco_casts.id) AS choco_cast_id"),
                 DB::raw("MAX(night_casts.id) AS night_cast_id "),
@@ -62,6 +52,16 @@ class UserScoreQueryBuilder
                 "),
                 DB::raw("MAX(tissues.id) AS last_tissue_id")
             )
+            ->fromSub($tissueQuery, 'tissues')
+            ->leftJoin('casts AS choco_casts', 'choco_casts.id', '=', 'tissues.cast_id')
+            ->leftJoin('yoasobi_casts AS night_casts', 'night_casts.id', '=', 'tissues.night_cast_id')
+            ->leftJoin('casts AS night_casts_binding_choco_casts', 'night_casts_binding_choco_casts.town_night_cast_id', '=', 'night_casts.id')
+            ->leftJoinSub($chocoMypageQuery, 'choco_mypages', 'choco_mypages.id', '=', 'tissues.mypage_id')
+            ->leftJoinSub($chocoGuestQuery, 'choco_guests', 'choco_guests.id', '=', 'tissues.guest_id')
+            ->leftJoinSub($weeklyOrTotalRankingPointQuery, 'choco_cast_weekly_ranking_points', 'choco_cast_weekly_ranking_points.choco_cast_id', '=', 'choco_casts.id')
+            ->leftJoinSub($weeklyOrTotalRankingPointQuery, 'night_cast_weekly_ranking_points', 'night_cast_weekly_ranking_points.night_cast_id', '=', 'night_casts.id')
+            ->leftJoinSub($weeklyOrTotalRankingPointQuery, 'choco_mypage_weekly_ranking_points', 'choco_mypage_weekly_ranking_points.choco_mypage_id', '=', 'choco_mypages.id')
+            ->leftJoinSub($weeklyOrTotalRankingPointQuery, 'choco_guest_weekly_ranking_points', 'choco_guest_weekly_ranking_points.choco_guest_id', '=', 'choco_guests.id')
             ->whereNotNull('choco_casts.id')
             ->orWhereNotNull('night_casts.id')
             ->orWhereNotNull('choco_guests.id')

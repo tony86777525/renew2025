@@ -13,6 +13,37 @@ class ShopRankingQueryBuilder
     ): QueryBuilder {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
+            ->select(
+                'tissues.choco_cast_id',
+                'tissues.night_cast_id',
+                'choco_shops.id AS choco_shop_table_id',
+                'choco_shops.pref_id AS choco_shop_pref_id',
+                'choco_shops.active_flg AS choco_shop_active_flg',
+                'choco_shops.close_flg AS choco_shop_close_flg',
+                'choco_shops.test_shop AS choco_shop_test_shop',
+                'choco_shops.pay_flg AS choco_shop_pay_flg',
+                'choco_shops_binding_night_shops.id AS choco_shop_binding_night_shop_table_id',
+                'choco_shops_binding_night_shops.prefecture_id AS choco_shop_binding_night_shop_pref_id',
+                'choco_shops_binding_night_shops.status_id AS choco_shop_binding_night_shop_status_id',
+                'choco_shops_binding_night_shops.is_closed AS choco_shop_binding_night_shop_is_closed',
+                'choco_shops_binding_night_shops.is_test AS choco_shop_binding_night_shop_is_test',
+                'choco_shops_binding_night_shops.plan AS choco_shop_binding_night_shop_plan',
+                'night_shops_binding_choco_shops.id AS night_shop_binding_choco_shop_table_id',
+                'night_shops_binding_choco_shops.pref_id AS night_shop_binding_choco_shop_pref_id',
+                'night_shops_binding_choco_shops.active_flg AS night_shop_binding_choco_shop_active_flg',
+                'night_shops_binding_choco_shops.close_flg AS night_shop_binding_choco_shop_close_flg',
+                'night_shops_binding_choco_shops.test_shop AS night_shop_binding_choco_shop_test_shop',
+                'night_shops_binding_choco_shops.pay_flg AS night_shop_binding_choco_shop_pay_flg',
+                'night_shops.id AS night_shop_table_id',
+                'night_shops.prefecture_id AS night_shop_pref_id',
+                'night_shops.status_id AS night_shop_status_id',
+                'night_shops.is_closed AS night_shop_is_closed',
+                'night_shops.is_test AS night_shop_is_test',
+                'night_shops.plan AS night_shop_plan',
+                'tissues.point AS rank_point',
+                'tissues.tissue_count AS tissue_count',
+                'tissues.id AS id'
+            )
             ->fromSub(
                 DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
                     ->query()
@@ -45,38 +76,7 @@ class ShopRankingQueryBuilder
             ->leftJoin('shop_mains AS choco_shops', 'choco_shops.id', '=', 'tissues.choco_shop_table_id')
             ->leftJoin('yoasobi_shops_all AS choco_shops_binding_night_shops', 'choco_shops_binding_night_shops.id', '=', 'choco_shops.night_town_id')
             ->leftJoin('yoasobi_shops_all AS night_shops', 'night_shops.id', '=', 'tissues.night_shop_table_id')
-            ->leftJoin('shop_mains AS night_shops_binding_choco_shops', 'night_shops_binding_choco_shops.night_town_id', '=', 'night_shops.id')
-            ->select(
-                'tissues.choco_cast_id',
-                'tissues.night_cast_id',
-                'choco_shops.id AS choco_shop_table_id',
-                'choco_shops.pref_id AS choco_shop_pref_id',
-                'choco_shops.active_flg AS choco_shop_active_flg',
-                'choco_shops.close_flg AS choco_shop_close_flg',
-                'choco_shops.test_shop AS choco_shop_test_shop',
-                'choco_shops.pay_flg AS choco_shop_pay_flg',
-                'choco_shops_binding_night_shops.id AS choco_shop_binding_night_shop_table_id',
-                'choco_shops_binding_night_shops.prefecture_id AS choco_shop_binding_night_shop_pref_id',
-                'choco_shops_binding_night_shops.status_id AS choco_shop_binding_night_shop_status_id',
-                'choco_shops_binding_night_shops.is_closed AS choco_shop_binding_night_shop_is_closed',
-                'choco_shops_binding_night_shops.is_test AS choco_shop_binding_night_shop_is_test',
-                'choco_shops_binding_night_shops.plan AS choco_shop_binding_night_shop_plan',
-                'night_shops_binding_choco_shops.id AS night_shop_binding_choco_shop_table_id',
-                'night_shops_binding_choco_shops.pref_id AS night_shop_binding_choco_shop_pref_id',
-                'night_shops_binding_choco_shops.active_flg AS night_shop_binding_choco_shop_active_flg',
-                'night_shops_binding_choco_shops.close_flg AS night_shop_binding_choco_shop_close_flg',
-                'night_shops_binding_choco_shops.test_shop AS night_shop_binding_choco_shop_test_shop',
-                'night_shops_binding_choco_shops.pay_flg AS night_shop_binding_choco_shop_pay_flg',
-                'night_shops.id AS night_shop_table_id',
-                'night_shops.prefecture_id AS night_shop_pref_id',
-                'night_shops.status_id AS night_shop_status_id',
-                'night_shops.is_closed AS night_shop_is_closed',
-                'night_shops.is_test AS night_shop_is_test',
-                'night_shops.plan AS night_shop_plan',
-                'tissues.point AS rank_point',
-                'tissues.tissue_count AS tissue_count',
-                'tissues.id AS id'
-            );
+            ->leftJoin('shop_mains AS night_shops_binding_choco_shops', 'night_shops_binding_choco_shops.night_town_id', '=', 'night_shops.id');
     }
 
     public function buildTissueChocoShop(
@@ -84,7 +84,6 @@ class ShopRankingQueryBuilder
     ): QueryBuilder {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->fromSub($eligibleTissueQuery, 'tissueQuery')
             ->select(
                 'choco_cast_id',
                 'night_cast_id',
@@ -96,6 +95,7 @@ class ShopRankingQueryBuilder
                 'tissue_count',
                 'id'
             )
+            ->fromSub($eligibleTissueQuery, 'tissueQuery')
             ->where(function ($query) {
                 $query
                     ->whereNotNull('choco_shop_table_id')
@@ -119,7 +119,6 @@ class ShopRankingQueryBuilder
     ): QueryBuilder {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->fromSub($eligibleTissueQuery, 'tissueQuery')
             ->select(
                 'choco_cast_id',
                 'night_cast_id',
@@ -131,6 +130,7 @@ class ShopRankingQueryBuilder
                 'tissue_count',
                 'id'
             )
+            ->fromSub($eligibleTissueQuery, 'tissueQuery')
             ->where(function ($query) {
                 $query
                     ->whereNotNull('night_shop_binding_choco_shop_table_id')
@@ -161,7 +161,6 @@ class ShopRankingQueryBuilder
     ): QueryBuilder {
         return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->fromSub($unpivotedShopQuery, 'unpivoted_shops')
             ->select(
                 'choco_shop_table_id',
                 'choco_shop_pref_id',
@@ -172,6 +171,7 @@ class ShopRankingQueryBuilder
                 DB::raw("CONCAT(IFNULL(choco_shop_table_id, 0), '-', IFNULL(night_shop_table_id, 0)) AS canonical_shop_id"),
                 DB::raw("CONCAT(IFNULL(choco_cast_id, 0),'-',IFNULL(night_cast_id, 0)) AS canonical_cast_id")
             )
+            ->fromSub($unpivotedShopQuery, 'unpivoted_shops')
             ->distinct();
     }
 }

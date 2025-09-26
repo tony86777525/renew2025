@@ -27,7 +27,6 @@ class ListRepository
     ): \Illuminate\Support\Collection {
         $query = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->from((new TissueActiveView)->getTable())
             ->select(
                 "tissue_id",
                 "target_id",
@@ -36,6 +35,7 @@ class ListRepository
                 "pref_id",
                 "release_date"
             )
+            ->from((new TissueActiveView)->getTable())
             ->when(isset($prefId) ,function ($query) use ($prefId) {
                 $query->where('pref_id', $prefId);
             })
@@ -60,18 +60,18 @@ class ListRepository
         try {
             $query = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
                 ->query()
-                ->fromSub($tissues, 'tissues')
-                ->rightJoin((new TissueNightRecommendPc)->getTable(), function ($join) {
-                    $join
-                        ->on('tissue_night_recommend_pc.tissue_id', '=', 'tissues.tissue_id')
-                        ->on('tissue_night_recommend_pc.tissue_type', '=', 'tissues.tissue_type');
-                })
                 ->select(
                     "tissues.tissue_id",
                     "tissues.target_id",
                     "tissues.tissue_type",
                     "tissues.tissue_from_type"
                 )
+                ->fromSub($tissues, 'tissues')
+                ->rightJoin((new TissueNightRecommendPc)->getTable(), function ($join) {
+                    $join
+                        ->on('tissue_night_recommend_pc.tissue_id', '=', 'tissues.tissue_id')
+                        ->on('tissue_night_recommend_pc.tissue_type', '=', 'tissues.tissue_type');
+                })
                 ->when(isset($prefId) && !empty($prefId) ,function ($query) use ($prefId) {
                     $query->where('tissue_night_recommend_pc.pref_id', $prefId);
                 })
@@ -103,18 +103,18 @@ class ListRepository
 
         $query = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->fromSub($tissues, 'tissues')
-            ->rightJoin((new TissueNightRecommendSp)->getTable(), function ($join) {
-                $join
-                    ->on('tissue_night_recommend_sp.tissue_id', '=', 'tissues.tissue_id')
-                    ->on('tissue_night_recommend_sp.tissue_type', '=', 'tissues.tissue_type');
-            })
             ->select(
                 "tissues.tissue_id",
                 "tissues.target_id",
                 "tissues.tissue_type",
                 "tissues.tissue_from_type"
             )
+            ->fromSub($tissues, 'tissues')
+            ->rightJoin((new TissueNightRecommendSp)->getTable(), function ($join) {
+                $join
+                    ->on('tissue_night_recommend_sp.tissue_id', '=', 'tissues.tissue_id')
+                    ->on('tissue_night_recommend_sp.tissue_type', '=', 'tissues.tissue_type');
+            })
             ->when(isset($prefId) && !empty($prefId), function ($query) use ($prefId) {
                 $query->where('tissue_night_recommend_sp.pref_id', $prefId);
             })
@@ -157,9 +157,6 @@ class ListRepository
 
         $query = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->fromSub($userScoreQuery, 'user_scores')
-            ->leftJoinSub($chocoShopQuery, 'choco_shops', 'choco_shops.id', '=', 'user_scores.choco_shop_table_id')
-            ->leftJoinSub($nightShopQuery, 'night_shops', 'night_shops.id', '=', 'user_scores.night_shop_table_id')
             ->select(
                 "user_scores.choco_cast_id",
                 "choco_shops.id AS choco_shop_table_id",
@@ -174,6 +171,9 @@ class ListRepository
                 "user_scores.tissue_count",
                 "user_scores.last_tissue_id"
             )
+            ->fromSub($userScoreQuery, 'user_scores')
+            ->leftJoinSub($chocoShopQuery, 'choco_shops', 'choco_shops.id', '=', 'user_scores.choco_shop_table_id')
+            ->leftJoinSub($nightShopQuery, 'night_shops', 'night_shops.id', '=', 'user_scores.night_shop_table_id')
             ->when(isset($prefId) && !empty($prefId), function ($query) use ($prefId) {
                 $query
                     ->where('choco_shops.pref_id', $prefId)
@@ -218,9 +218,6 @@ class ListRepository
 
         $query = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->fromSub($userScoreQuery, 'user_scores')
-            ->leftJoinSub($chocoShopQuery, 'choco_shops', 'choco_shops.id', '=', 'user_scores.choco_shop_table_id')
-            ->leftJoinSub($nightShopQuery, 'night_shops', 'night_shops.id', '=', 'user_scores.night_shop_table_id')
             ->select(
                 "user_scores.choco_cast_id",
                 "choco_shops.id AS choco_shop_table_id",
@@ -233,6 +230,9 @@ class ListRepository
                 "user_scores.point",
                 "user_scores.last_tissue_id"
             )
+            ->fromSub($userScoreQuery, 'user_scores')
+            ->leftJoinSub($chocoShopQuery, 'choco_shops', 'choco_shops.id', '=', 'user_scores.choco_shop_table_id')
+            ->leftJoinSub($nightShopQuery, 'night_shops', 'night_shops.id', '=', 'user_scores.night_shop_table_id')
             ->when(isset($prefId) && !empty($prefId), function ($query) use ($prefId) {
                 $query->where(function ($query) use ($prefId) {
                     $query
@@ -271,7 +271,6 @@ class ListRepository
 
         $query = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->fromSub($uniqueCastShopPointQuery, 'unique_cast_shop_points')
             ->select(
                 DB::raw("MAX(choco_shop_table_id) AS choco_shop_table_id"),
                 DB::raw("MAX(choco_shop_pref_id) AS choco_shop_pref_id"),
@@ -282,6 +281,7 @@ class ListRepository
                 'canonical_shop_id',
                 DB::raw("GROUP_CONCAT(canonical_cast_id SEPARATOR ', ') AS cast_ids")
             )
+            ->fromSub($uniqueCastShopPointQuery, 'unique_cast_shop_points')
             ->when(!empty($displayedChocoShopTableIds), function ($query) use ($displayedChocoShopTableIds) {
                 $query->whereNotIn('choco_shop_table_id', $displayedChocoShopTableIds);
             })
@@ -315,14 +315,21 @@ class ListRepository
 
         $query = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->fromSub($tissueQuery, 'tissues')
-            ->leftJoin('casts AS choco_casts', 'choco_casts.id', '=', 'tissues.cast_id')
-            ->leftJoin('yoasobi_casts AS night_casts', 'night_casts.id', '=', 'tissues.night_cast_id')
             ->select(
                 "tissues.id AS tissue_id",
                 "tissues.release_date",
-                DB::raw("'{$tissueType}' AS tissue_type"),
-                DB::raw("({$tissueCommentLastOneQuery->toSql()}) AS last_comment_date")
+                "last_tissue_comments.created_at AS last_comment_datetime",
+                DB::raw("'{$tissueType}' AS tissue_type")
+            )
+            ->fromSub($tissueQuery, 'tissues')
+            ->leftJoin('casts AS choco_casts', 'choco_casts.id', '=', 'tissues.cast_id')
+            ->leftJoin('yoasobi_casts AS night_casts', 'night_casts.id', '=', 'tissues.night_cast_id')
+            ->leftJoinSub(
+                $tissueCommentLastOneQuery,
+                'last_tissue_comments',
+                'last_tissue_comments.tissue_id',
+                '=',
+                'tissues.id'
             )
             ->when(!empty($chocoShopTableIds), function ($query) use ($chocoShopTableIds) {
                 $query->whereIn("choco_casts.shop_table_id", $chocoShopTableIds);
@@ -332,8 +339,8 @@ class ListRepository
             })
             ->orderBy(DB::raw("(
                 CASE
-                    WHEN last_comment_date IS NOT NULL AND last_comment_date > tissues.release_date THEN
-                        last_comment_date
+                    WHEN last_tissue_comments.created_at IS NOT NULL AND last_tissue_comments.created_at > tissues.release_date THEN
+                        last_tissue_comments.created_at
                     ELSE
                         tissues.release_date
                 END
@@ -365,7 +372,6 @@ class ListRepository
 
         $query = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->fromSub($eligibleTissueQuery, 'tissues')
             ->select(
                 "choco_cast_id",
                 "night_cast_id",
@@ -373,6 +379,7 @@ class ListRepository
                 "night_shop_table_id",
                 "rank_point"
             )
+            ->fromSub($eligibleTissueQuery, 'tissues')
             ->when(!empty($chocoShopTableIds), function ($query) use ($chocoShopTableIds) {
                 $query->whereIn("choco_shop_table_id", $chocoShopTableIds);
             })
@@ -415,48 +422,19 @@ class ListRepository
             $chocoGuestQuery,
             $tissueCommentLastOneQuery
         );
-        $tissueHashtagQuery = $builder->buildHashtagWithTissue($hashtagQuery, $eligibleTissueQuery);
-
-        $tissueHashtagShowNumQuery = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
-            ->query()
-            ->fromSub($tissueHashtagQuery, 'tissue_hashtag')
-            ->select(
-                '*',
-                DB::raw("
-                    ROW_NUMBER() OVER (
-                        PARTITION BY tissue_id
-                        ORDER BY
-                            event_type DESC,
-                            hashtag_id ASC
-                    ) as show_num
-                ")
-            );
-
-        $rankingQuery = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
-            ->query()
-            ->fromSub($tissueHashtagShowNumQuery, 'tissue_shop_num_data')
-            ->select(
-                "*",
-                DB::raw("
-                    ROW_NUMBER() OVER (
-                        ORDER BY
-                            event_type DESC,
-                            show_num ASC,
-                            last_update_datetime DESC,
-                            tissue_id ASC
-                    ) as order_num
-                ")
-            );
+        $tissueHashtagQuery = $builder->buildTissueHashtag($hashtagQuery, $eligibleTissueQuery);
+        $tissueHashtagShowNumQuery = $builder->buildTissueHashtagShowNum($tissueHashtagQuery);
+        $rankingQuery = $builder->buildRanking($tissueHashtagShowNumQuery);
 
         $query = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->fromSub($rankingQuery, 'ranking_data')
             ->select(
                 "ranking_data.hashtag_id AS hashtag_id",
                 DB::raw("MIN(order_num) AS order_num"),
                 DB::raw("SUM(view_count) + ANY_VALUE(add_count) AS total_view_count"),
                 DB::raw("ANY_VALUE(last_update_datetime) AS last_update_datetime")
             )
+            ->fromSub($rankingQuery, 'ranking_data')
             ->groupBy('hashtag_id')
             ->orderBy("order_num", 'ASC')
             ->when(!empty($limit), function ($query) use ($limit) {
@@ -495,20 +473,20 @@ class ListRepository
 
         $baseQuery = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->from('tissue_hashtags', 'hashtags')
-            ->rightJoinSub($eligibleTissueQuery, 'tissues', 'hashtags.tissue_id', '=', 'tissues.id')
             ->select(
                 DB::raw("(
                     CASE
-                        WHEN last_comment_date IS NOT NULL AND last_comment_date > tissues.release_date THEN
-                            last_comment_date
+                        WHEN last_comment_datetime IS NOT NULL AND last_comment_datetime > tissues.release_date THEN
+                            last_comment_datetime
                         ELSE
                             tissues.release_date
                     END
                 ) AS last_update_datetime"),
                 "tissues.id AS tissue_id",
                 "hashtags.hashtag_id",
-            );
+            )
+            ->from('tissue_hashtags', 'hashtags')
+            ->rightJoinSub($eligibleTissueQuery, 'tissues', 'hashtags.tissue_id', '=', 'tissues.id');
 
         $query = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
@@ -547,10 +525,10 @@ class ListRepository
 
         $eligibleTissueQuery = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->fromSub($tissueQuery, 'tissues')
             ->select(
                 "tissues.*"
             )
+            ->fromSub($tissueQuery, 'tissues')
             ->leftJoin('casts AS choco_casts', 'choco_casts.id', '=', 'tissues.cast_id')
             ->leftJoin('yoasobi_casts AS night_casts', 'night_casts.id', '=', 'tissues.night_cast_id')
             ->leftJoinSub($chocoMypageQuery, 'choco_mypages', function ($join) {
@@ -566,10 +544,6 @@ class ListRepository
 
         $baseQuery = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
-            ->from('tissue_hashtags', 'hashtags')
-            ->rightJoinSub($eligibleTissueQuery, 'tissues', function ($join) {
-                $join->on('hashtags.tissue_id', '=', 'tissues.id');
-            })
             ->select(
                 "hashtags.hashtag_id AS hashtag_id",
                 "tissues.cast_id AS choco_cast_id",
@@ -580,6 +554,10 @@ class ListRepository
                 "tissues.add_good_count AS add_good_count",
                 "tissues.view_count AS view_count"
             )
+            ->from('tissue_hashtags', 'hashtags')
+            ->rightJoinSub($eligibleTissueQuery, 'tissues', function ($join) {
+                $join->on('hashtags.tissue_id', '=', 'tissues.id');
+            })
             ->when(!empty($hashtagId), function ($query) use ($hashtagId) {
                 $query->where('hashtags.hashtag_id', '=', $hashtagId);
             });
@@ -621,16 +599,12 @@ class ListRepository
         );
         $chocoMypageQuery = $this->buildChocoMypageQuery();
         $chocoGuestQuery = $this->buildChocoGuestQuery();
-        $tissueCommentLastOneQuery = $this->buildTissueCommentLastOneQuery();
         $tissueType = Tissue::TISSUE_TYPE_GIRL;
 
         $tissueQuery = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
+            ->select("tissues.*")
             ->fromSub($tissueQuery, 'tissues')
-            ->select(
-                "tissues.*",
-                DB::raw("({$tissueCommentLastOneQuery->toSql()}) AS last_comment_date")
-            )
             ->leftJoin('casts AS choco_casts', 'choco_casts.id', '=', 'tissues.cast_id')
             ->leftJoin('yoasobi_casts AS night_casts', 'night_casts.id', '=', 'tissues.night_cast_id')
             ->leftJoinSub($chocoMypageQuery, 'choco_mypages', function ($join) {
@@ -650,8 +624,7 @@ class ListRepository
             ->select(
                 "tissues.id AS tissue_id",
                 "tissues.release_date",
-                DB::raw("'{$tissueType}' AS tissue_type"),
-                DB::raw("({$tissueCommentLastOneQuery->toSql()}) AS last_comment_date")
+                DB::raw("'{$tissueType}' AS tissue_type")
             )
             ->when(!empty($tissueIds), function ($query) use ($tissueIds) {
                 $query->whereIn("id", $tissueIds);
