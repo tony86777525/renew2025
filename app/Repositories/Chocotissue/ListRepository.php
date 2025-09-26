@@ -132,7 +132,6 @@ class ListRepository
     ): \Illuminate\Support\Collection {
         $startDate = $this->championshipStartDatetime();
         $endDate = $this->nowDatetime();
-        $weekStartDate = $this->weekStartDate();
         $lastWeekStartDate = $this->lastWeekStartDate();
 
         $tissueQuery = $this->buildUserTissueQuery(
@@ -151,8 +150,7 @@ class ListRepository
             $tissueQuery,
             $weeklyRankingPointQuery,
             $chocoMypageQuery,
-            $chocoGuestQuery,
-            $weekStartDate
+            $chocoGuestQuery
         );
 
         $query = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
@@ -212,8 +210,7 @@ class ListRepository
             $tissueQuery,
             $rankingPointQuery,
             $chocoMypageQuery,
-            $chocoGuestQuery,
-            $startDate
+            $chocoGuestQuery
         );
 
         $query = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
@@ -364,11 +361,8 @@ class ListRepository
         $tissueQuery = $this->buildCastTissueQuery($startDate, $endDate, $this->excludedChocoCasts());
         $rankingPointQuery = $this->buildRankingPointQuery($startDate);
 
-        $builder = new ShopRankingQueryBuilder;
-        $eligibleTissueQuery = $builder->buildEligibleTissue(
-            $tissueQuery,
-            $rankingPointQuery
-        );
+        $build = new UserScoreQueryBuilder;
+        $castScoreQuery = $build->castQueryBuild($tissueQuery, $rankingPointQuery);
 
         $query = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
@@ -377,17 +371,19 @@ class ListRepository
                 "night_cast_id",
                 "choco_shop_table_id",
                 "night_shop_table_id",
-                "rank_point"
+                "rank_point",
+                "tissue_count",
+                "last_tissue_id"
             )
-            ->fromSub($eligibleTissueQuery, 'tissues')
+            ->fromSub($castScoreQuery, 'cast_scores')
             ->when(!empty($chocoShopTableIds), function ($query) use ($chocoShopTableIds) {
                 $query->whereIn("choco_shop_table_id", $chocoShopTableIds);
             })
             ->when(!empty($nightShopTableIds), function ($query) use ($nightShopTableIds) {
                 $query->orWhereIn("night_shop_table_id", $nightShopTableIds);
             })
-            ->orderBy("rank_point", 'desc')
-            ->orderBy("id", 'desc')
+            ->orderBy("rank_point", 'DESC')
+            ->orderBy("last_tissue_id", 'DESC')
             ->when(!empty($limit), function ($query) use ($limit, $offset) {
                 $query
                     ->skip($offset)

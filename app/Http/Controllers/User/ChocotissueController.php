@@ -143,16 +143,40 @@ class ChocotissueController extends Controller
         $nightShopTableId = 8588;
         $page = 1;
 
-        $data = $this->chocotissueService->getShopRankingDetail(
+        list($shop, $casts) = $this->chocotissueService->getShopRankingDetail(
             $isTimeline,
             $chocoShopTableId,
             $nightShopTableId,
             $page
         );
 
-        $data->each(function ($row) {
-            echo "<img style=\"width: 18vw;max-height:180px;\" src=\"{$row->tissue->front_show_image_path}\">";
-        });
+        if ($isTimeline) {
+            $casts->each(function ($row) {
+                echo "<div style=\"display: inline-flex;flex-direction: row;align-items: flex-start;flex-wrap: wrap;position: relative;\">
+<div style=\"width: 18vw;\">
+<div>User: {$row->tissue->user_type}</div>
+<div>User ID: <span style=\"color: red;\">{$row->tissue->user_id}</span></div>
+<div>Top Tissue ID: <span style=\"color: red;\">{$row->tissue->id}</span></div>
+<div>Last Comment datetime: <span style=\"color: red;\">{$row->last_comment_datetime}</span></div>
+<div>Release datetime: <span style=\"color: red;\">{$row->release_date}</span></div>
+<img style=\"max-height:262px;max-width:200px;\" src=\"{$row->tissue->front_show_image_path}\">
+</div>
+</div>";
+            });
+        } else {
+            $casts->each(function ($row) {
+                echo "<div style=\"display: inline-flex;flex-direction: row;align-items: flex-start;flex-wrap: wrap;position: relative;\">
+<div style=\"width: 18vw;\">
+<div>User: {$row->tissue->user_type}</div>
+<div>User ID: <span style=\"color: red;\">{$row->tissue->user_id}</span></div>
+<div>Top Tissue ID: <span style=\"color: red;\">{$row->tissue->id}</span></div>
+<div>Point: <span style=\"color: red;\">{$row->rank_point}</span></div>
+<img style=\"max-height:262px;max-width:200px;\" src=\"{$row->tissue->front_show_image_path}\">
+</div>
+</div>";
+            });
+        }
+
         exit;
         return view('user.top.index');
     }

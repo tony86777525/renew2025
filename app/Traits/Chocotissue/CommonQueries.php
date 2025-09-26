@@ -220,7 +220,7 @@ trait CommonQueries
                 'tissue_comments.master_comment_id'
             )
             ->whereNull('master_tissue_comments.id')
-            ->where('master_tissue_comments.del', '=', DB::raw(0));
+            ->orWhere('master_tissue_comments.del', '=', DB::raw(0));
     }
 
     protected function buildTissueCommentLastOneQuery()

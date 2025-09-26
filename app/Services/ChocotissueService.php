@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\Chocolat\Tissue;
+use App\Models\Chocolat\ShopMain AS ChocoShop;
+use App\Models\Night\Shop AS NightShop;
 use App\Repositories\Chocotissue\ListRepository;
 use App\Repositories\Chocotissue\TissueRepository;
 use App\Repositories\Chocotissue\HashtagRepository;
@@ -208,7 +210,7 @@ class ChocotissueService
         int $chocoShopTableId = null,
         int $nightShopTableId = null,
         int $page = 1
-    ): \Illuminate\Support\Collection {
+    ): array {
         if (empty($chocoShopTableId) && empty($nightShopTableId)) {
             throw new \InvalidArgumentException('Shop must not be null');
         }
@@ -220,6 +222,19 @@ class ChocotissueService
         $limit = 30;
         $offset = ($page - 1) * $limit;
 
+        $shops = $this->listRepository->getShopRankings([], []);
+
+        $shop = $shops->firstWhere(function ($shop) use ($chocoShopTableId, $nightShopTableId) {
+            return $shop->choco_shop_table_id == $chocoShopTableId && $shop->night_shop_table_id == $nightShopTableId;
+        });
+
+        if (!empty($data->choco_shop_table_id)) {
+            $shop->chocoShop = ChocoShop::find($data->choco_shop_table_id);
+        }
+        if (!empty($data->choco_shop_table_id)) {
+            $shop->nightShop = NightShop::find($data->choco_shop_table_id);
+        }
+
         if ($isTimeline === true) {
             $data = $this->listRepository->getShopRankingDetailTimeline(
                 [$chocoShopTableId],
@@ -227,7 +242,8 @@ class ChocotissueService
                 $limit,
                 $offset
             );
-            return $this->enrichDataWithTissues($data);
+
+            $casts = $this->enrichDataWithTissues($data);
         } else {
             $data = $this->listRepository->getShopRankingDetailRanking(
                 [$chocoShopTableId],
@@ -235,8 +251,11 @@ class ChocotissueService
                 $limit,
                 $offset
             );
-            return $this->enrichUserDataWithTissues($data);
+
+            $casts = $this->enrichUserDataWithTissues($data);
         }
+
+        return [$shop, $casts];
     }
 
     public function getHashtags(
