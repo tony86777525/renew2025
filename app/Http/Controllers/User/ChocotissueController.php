@@ -4,6 +4,11 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Response;
+use Illuminate\Contracts\View\View;
+use InvalidArgumentException;
+use Exception;
 use App\Services\ChocotissueService;
 
 class ChocotissueController extends Controller
@@ -18,60 +23,44 @@ class ChocotissueController extends Controller
         $this->chocotissueService = $chocotissueService;
     }
 
-    public function handle(Request $request)
+    /**
+     * @param Request $request
+     * @param integer|null $prefId
+     * @return View|object
+     */
+    public function handle(Request $request, ?int $prefId = null)
     {
         if ($request->get('sort') == 3) {
-            return self::likedTissues($request);
+            return self::likedTissues($request, $prefId);
         }
 
-        return self::recommendations($request);
+        return self::recommendations($request, $prefId);
     }
 
     /**
      * Timeline
      *
-     * @return void
+     * @param Request $request
+     * @param integer|null $prefId
+     * @return View|object
      */
-    public function timeline(Request $request)
-    {
-        $data = $this->chocotissueService->getTimeline(1);
-
-        $data->each(function ($row) {
-            echo "<img style=\"width: 18vw;max-height:180px;\" src=\"{$row->tissue->front_show_image_path}\">";
-        });
-        exit;
-        return view('user.top.index');
-    }
-
-    /**
-     * Recommendations
-     *
-     * @return void
-     */
-    public function recommendations(Request $request)
+    public function timeline(Request $request, ?int $prefId = null)
     {
         try {
-            $data = $this->chocotissueService->getRecommendations(
-                $request->get('is_pc', true),
-                $request->get('page', 1),
-                $request->get('pref_id', null)
-            );
+            $data = $this->chocotissueService->getTimeline(1, $prefId);
 
-            $data->each(function ($row) {
-                echo "<img style=\"width: 18vw;max-height:180px;\" src=\"{$row->tissue->front_show_image_path}\">";
-            });
-            exit;
-            return view('user.chocotissue.recommendations');
-        } catch (\InvalidArgumentException $e) {
+            return view('user.chocotissue.timeline', compact(
+                'data'
+            ));
+        } catch (InvalidArgumentException $e) {
             // 參數錯誤 - 400
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 400);
-
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // 系統錯誤 - 500
-            \Log::error('Chocotissue recommendation error', [
+            Log::error('Chocotissue recommendation error', [
                 'request' => $request->all(),
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -79,60 +68,174 @@ class ChocotissueController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => '系統暫時無法處理您的請求'
+                'message' => '系統暫時無法處理您的請求',
             ], 500);
         }
     }
 
-    public function userWeeklyRankings()
+    /**
+     * Recommendations
+     *
+     * @param Request $request
+     * @param integer|null $prefId
+     * @return View|object
+     */
+    public function recommendations(Request $request, ?int $prefId = null)
     {
-        $data = $this->chocotissueService->getUserWeeklyRankings();
-        $data->each(function ($row) {
-            echo "<img style=\"width: 18vw;max-height:180px;\" src=\"{$row->tissue->front_show_image_path}\">";
-            // echo "{$row->tissue->front_show_image_path}<BR>";
-        });
-        exit;
-        return view('user.top.index');
+        try {
+            $data = $this->chocotissueService->getRecommendations(
+                $request->get('is_pc', true),
+                $request->get('page', 1),
+                $prefId ?? null
+            );
+
+            return view('user.chocotissue.recommendations', compact(
+                'data'
+            ));
+        } catch (InvalidArgumentException $e) {
+            // 參數錯誤 - 400
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        } catch (Exception $e) {
+            // 系統錯誤 - 500
+            Log::error('Chocotissue recommendation error', [
+                'request' => $request->all(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => '系統暫時無法處理您的請求',
+            ], 500);
+        }
     }
 
-    public function userRankings()
+    /**
+     * UserWeeklyRankings
+     *
+     * @param Request $request
+     * @param integer|null $prefId
+     * @return View|object
+     */
+    public function userWeeklyRankings(Request $request, ?int $prefId = null)
     {
-        $data = $this->chocotissueService->getUserRankings();
-        $data->each(function ($row) {
-            echo "<img style=\"width: 18vw;max-height:180px;\" src=\"{$row->tissue->front_show_image_path}\">";
-        });
-        exit;
-        return view('user.top.index');
+        try {
+            $data = $this->chocotissueService->getUserWeeklyRankings(1, $prefId);
+
+            return view('user.chocotissue.user-ranking-weekly', compact(
+                'data'
+            ));
+        } catch (InvalidArgumentException $e) {
+            // 參數錯誤 - 400
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        } catch (Exception $e) {
+            // 系統錯誤 - 500
+            Log::error('Chocotissue recommendation error', [
+                'request' => $request->all(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => '系統暫時無法處理您的請求',
+            ], 500);
+        }
     }
 
-    public function shopRankings()
+    /**
+     * UserRankings
+     *
+     * @param Request $request
+     * @param integer|null $prefId
+     * @return View|object
+     */
+    public function userRankings(Request $request, ?int $prefId = null)
+    {
+        try {
+            $data = $this->chocotissueService->getUserRankings(1, $prefId);
+
+            return view('user.chocotissue.user-ranking', compact(
+                'data'
+            ));
+        } catch (InvalidArgumentException $e) {
+            // 參數錯誤 - 400
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        } catch (Exception $e) {
+            // 系統錯誤 - 500
+            Log::error('Chocotissue recommendation error', [
+                'request' => $request->all(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => '系統暫時無法處理您的請求',
+            ], 500);
+        }
+    }
+
+    /**
+     * ShopRankings
+     *
+     * @param Request $request
+     * @param integer|null $prefId
+     * @return View|object
+     */
+    public function shopRankings(Request $request, ?int $prefId = null)
     {
         $displayedChocoShopTableIds = [];
         $displayedNightShopTableIds = [];
         $page = 1;
-        $prefId = null;
 
-        $data = $this->chocotissueService->getShopRankings($displayedChocoShopTableIds, $displayedNightShopTableIds, $page, $prefId);
+        try {
+            $data = $this->chocotissueService->getShopRankings(
+                $displayedChocoShopTableIds,
+                $displayedNightShopTableIds,
+                $page,
+                $prefId
+            );
 
-        $data->each(function ($row) {
-            echo "<BR><div>{$row->choco_shop_table_id} | $row->choco_shop_pref_id & {$row->night_shop_table_id} | $row->night_shop_pref_id </div>";
-            echo "<div>Casts：{$row->cast_ids} </div><BR>";
-            $row->tissues->each(function ($tissue) {
-                echo "<div style=\"display: inline-flex;flex-direction: row;align-items: flex-start;flex-wrap: wrap;position: relative;\">
-<div style=\"width: 18vw;\">
-<div>User: {$tissue->user_type}</div>
-<div>User ID: <span style=\"color: red;\">{$tissue->user_id}</span></div>
-<div>Top Tissue ID: <span style=\"color: red;\">{$tissue->id}</span></div>
-<img style=\"max-height:262px;max-width:200px;\" src=\"{$tissue->front_show_image_path}\">
-</div>
-</div>";
-            });
-            echo "<BR><BR><BR><BR><BR>";
-        });
-        exit;
-        return view('user.top.index');
+            return view('user.chocotissue.shop-ranking', compact(
+                'data'
+            ));
+        } catch (InvalidArgumentException $e) {
+            // 參數錯誤 - 400
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        } catch (Exception $e) {
+            // 系統錯誤 - 500
+            Log::error('Chocotissue recommendation error', [
+                'request' => $request->all(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => '系統暫時無法處理您的請求',
+            ], 500);
+        }
     }
 
+    /**
+     * ShopRankingDetail
+     *
+     * @param Request $request
+     * @return View|object
+     */
     public function shopRankingDetail(Request $request)
     {
         $isTimeline = ($request->string('type', '')->toString() !== 'rank');
@@ -143,106 +246,210 @@ class ChocotissueController extends Controller
         $nightShopTableId = 8588;
         $page = 1;
 
-        list($shop, $casts) = $this->chocotissueService->getShopRankingDetail(
-            $isTimeline,
-            $chocoShopTableId,
-            $nightShopTableId,
-            $page
-        );
+        try {
+            list($shop, $casts) = $this->chocotissueService->getShopRankingDetail(
+                $isTimeline,
+                $chocoShopTableId,
+                $nightShopTableId,
+                $page
+            );
 
-        if ($isTimeline) {
-            $casts->each(function ($row) {
-                echo "<div style=\"display: inline-flex;flex-direction: row;align-items: flex-start;flex-wrap: wrap;position: relative;\">
-<div style=\"width: 18vw;\">
-<div>User: {$row->tissue->user_type}</div>
-<div>User ID: <span style=\"color: red;\">{$row->tissue->user_id}</span></div>
-<div>Top Tissue ID: <span style=\"color: red;\">{$row->tissue->id}</span></div>
-<div>Last Comment datetime: <span style=\"color: red;\">{$row->last_comment_datetime}</span></div>
-<div>Release datetime: <span style=\"color: red;\">{$row->release_date}</span></div>
-<img style=\"max-height:262px;max-width:200px;\" src=\"{$row->tissue->front_show_image_path}\">
-</div>
-</div>";
-            });
-        } else {
-            $casts->each(function ($row) {
-                echo "<div style=\"display: inline-flex;flex-direction: row;align-items: flex-start;flex-wrap: wrap;position: relative;\">
-<div style=\"width: 18vw;\">
-<div>User: {$row->tissue->user_type}</div>
-<div>User ID: <span style=\"color: red;\">{$row->tissue->user_id}</span></div>
-<div>Top Tissue ID: <span style=\"color: red;\">{$row->tissue->id}</span></div>
-<div>Point: <span style=\"color: red;\">{$row->rank_point}</span></div>
-<img style=\"max-height:262px;max-width:200px;\" src=\"{$row->tissue->front_show_image_path}\">
-</div>
-</div>";
-            });
+            if ($isTimeline) {
+                return view('user.chocotissue.shop-ranking-timeline', compact(
+                    'shop',
+                    'casts'
+                ));
+            } else {
+                return view('user.chocotissue.shop-ranking-ranking', compact(
+                    'shop',
+                    'casts'
+                ));
+            }
+        } catch (InvalidArgumentException $e) {
+            // 參數錯誤 - 400
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        } catch (Exception $e) {
+            // 系統錯誤 - 500
+            Log::error('Chocotissue recommendation error', [
+                'request' => $request->all(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => '系統暫時無法處理您的請求',
+            ], 500);
         }
-
-        exit;
-        return view('user.top.index');
     }
 
+    /**
+     * Hashtags
+     *
+     * @param Request $request
+     * @return View|object
+     */
     public function hashtags(Request $request)
     {
         $displayedHashtagIds = [];
 
-        $data = $this->chocotissueService->getHashtags($displayedHashtagIds);
+        try {
+            $data = $this->chocotissueService->getHashtags($displayedHashtagIds);
 
-        $data->each(function ($row) {
-            echo "<div>{$row->hashtag->id} : {$row->hashtag->name} : {$row->total_view_count}</div>";
-            $row->tissues->each(function ($tissue) {
-                echo "<img style=\"width: 10vw;max-height:180px;\" src=\"{$tissue->front_show_image_path}\">";
-            });
-            echo "<BR><BR><BR><BR><BR>";
-        });
-        exit;
-        return view('user.top.index');
+            return view('user.chocotissue.hashtag', compact(
+                'data'
+            ));
+        } catch (InvalidArgumentException $e) {
+            // 參數錯誤 - 400
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        } catch (Exception $e) {
+            // 系統錯誤 - 500
+            Log::error('Chocotissue recommendation error', [
+                'request' => $request->all(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => '系統暫時無法處理您的請求',
+            ], 500);
+        }
     }
 
+    /**
+     * Hashtag Detail
+     *
+     * @param Request $request
+     * @return View|object
+     */
     public function hashtagDetail(Request $request, $hashtagId)
     {
         $isTimeline = ($request->string('type', '')->toString() !== 'rank');
         $page = 1;
 
-        $data = $this->chocotissueService->getHashtagDetail(
-            $isTimeline,
-            $hashtagId,
-            $page
-        );
+        try {
+            $data = $this->chocotissueService->getHashtagDetail(
+                $isTimeline,
+                $hashtagId,
+                $page
+            );
 
-        $data->each(function ($row) {
-            echo "<img style=\"width: 18vw;max-height:180px;\" src=\"{$row->tissue->front_show_image_path}\">";
-        });
-        exit;
-        return view('user.top.index');
+            if ($isTimeline) {
+                return view('user.chocotissue.hashtag-timeline', compact(
+                    'data'
+                ));
+            } else {
+                return view('user.chocotissue.hashtag-ranking', compact(
+                    'data'
+                ));
+            }
+        } catch (InvalidArgumentException $e) {
+            // 參數錯誤 - 400
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        } catch (Exception $e) {
+            // 系統錯誤 - 500
+            Log::error('Chocotissue recommendation error', [
+                'request' => $request->all(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => '系統暫時無法處理您的請求',
+            ], 500);
+        }
     }
 
-    public function likedTissues()
+    /**
+     * Liked Tissue
+     *
+     * @param Request $request
+     * @param integer|null $prefId
+     * @return View|object
+     */
+    public function likedTissues(Request $request, ?int $prefId = null)
     {
         $tissueIds = [30423];
         $page = 1;
 
-        $data = $this->chocotissueService->getTissues(
-            $tissueIds,
-            $page,
-        );
+        try {
+            $data = $this->chocotissueService->getTissues(
+                $tissueIds,
+                $page,
+                $prefId
+            );
 
-        $data->each(function ($row) {
-            echo "<img style=\"width: 18vw;max-height:180px;\" src=\"{$row->tissue->front_show_image_path}\">";
-        });
-        exit;
-        return view('user.top.index');
+            return view('user.chocotissue.liked-tissue', compact(
+                'data'
+            ));
+        } catch (InvalidArgumentException $e) {
+            // 參數錯誤 - 400
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        } catch (Exception $e) {
+            // 系統錯誤 - 500
+            Log::error('Chocotissue recommendation error', [
+                'request' => $request->all(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => '系統暫時無法處理您的請求',
+            ], 500);
+        }
     }
 
-    public function detail($tissueId)
+    /**
+     * Detail
+     *
+     * @param Request $request
+     * @return View|object
+     */
+    public function detail(Request $request, $tissueId)
     {
-        $data = $this->chocotissueService->getTissues(
-            [$tissueId]
-        );
+        try {
+            $data = $this->chocotissueService->getTissues(
+                [$tissueId]
+            );
 
-        $data = $data->first();
+            $data = $data->first();
 
-        echo "<img style=\"width: 18vw;max-height:180px;\" src=\"{$data->tissue->front_show_image_path}\">";
-        exit;
-        return view('user.chocotissue.detail');
+            return view('user.chocotissue.detail', compact(
+                'data'
+            ));
+        } catch (InvalidArgumentException $e) {
+            // 參數錯誤 - 400
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        } catch (Exception $e) {
+            // 系統錯誤 - 500
+            Log::error('Chocotissue recommendation error', [
+                'request' => $request->all(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => '系統暫時無法處理您的請求',
+            ], 500);
+        }
     }
 }

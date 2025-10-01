@@ -11,6 +11,16 @@ class MensTissue extends Model
     CONST THUMBNAIL_SECOND = '-00003.png';
 
     /**
+     * Tissue 來源類型常數
+     */
+    const TISSUE_FROM_TYPE_MEN_MYPAGE = 'MEN_MYPAGE';
+    const TISSUE_FROM_TYPE_MEN_GUEST = 'MEN_GUEST';
+    const TISSUE_FROM_TYPE_MEN_STAFF = 'MEN_STAFF';
+    const TISSUE_FROM_TYPE_MEN_NIGHT_MYPAGE = 'MEN_NIGHT_MYPAGE';
+    const TISSUE_FROM_TYPE_MEN_SHOP = 'MEN_SHOP';
+    const TISSUE_FROM_TYPE_MEN_NIGHT_SHOP = 'MEN_NIGHT_SHOP';
+
+    /**
      * 開放程式碼新增或編輯的欄位
      * 避免誤改其他欄位
      */
@@ -167,5 +177,39 @@ class MensTissue extends Model
         }
 
         return "{$baseUrl}/{$filePath}/{$fileName}";
+    }
+
+    public function getUserTypeAttribute()
+    {
+        if (!empty($this->mypage_id)) {
+            return self::TISSUE_FROM_TYPE_MEN_MYPAGE;
+        }
+
+        if (!empty($this->staff_id)) {
+            return self::TISSUE_FROM_TYPE_MEN_STAFF;
+        }
+
+        if (!empty($this->night_mypage_id)) {
+            return self::TISSUE_FROM_TYPE_MEN_NIGHT_MYPAGE;
+        }
+
+        return self::TISSUE_FROM_TYPE_MEN_GUEST;
+    }
+
+    public function getUserIdAttribute()
+    {
+        if (!empty($this->mypage_id)) {
+            return $this->mypage_id;
+        }
+
+        if (!empty($this->staff_id)) {
+            return $this->staff_id;
+        }
+
+        if (!empty($this->night_mypage_id)) {
+            return$this->night_mypage_id;
+        }
+
+        return $this->guest_id;
     }
 }

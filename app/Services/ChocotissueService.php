@@ -34,11 +34,9 @@ class ChocotissueService
      */
     public function getTimeline(
         int $page = 1,
-        int $prefId = null
+        ?int $prefId = null
     ): \Illuminate\Support\Collection {
-        if ($page < 1) {
-            throw new \InvalidArgumentException('Page must be greater than 0');
-        }
+        $this->validatePage($page);
 
         $limit = 30;
         $offset = ($page - 1) * $limit;
@@ -63,11 +61,10 @@ class ChocotissueService
     public function getRecommendations(
         bool $isPC = true,
         int $page = 1,
-        int $prefId = null
+        ?int $prefId = null
     ): \Illuminate\Support\Collection {
-        if ($page < 1) {
-            throw new \InvalidArgumentException('Page must be greater than 0');
-        }
+        $this->validatePage($page);
+        $this->validatePref($prefId);
 
         $limit = 30;
         $offset = ($page - 1) * $limit;
@@ -100,9 +97,10 @@ class ChocotissueService
 
     public function getUserWeeklyRankings(
         int $page = 1,
-        int $prefId = null
+        ?int $prefId = null
     ): \Illuminate\Support\Collection {
         $this->validatePage($page);
+        $this->validatePref($prefId);
 
         $limit = 30;
         $offset = ($page - 1) * $limit;
@@ -118,11 +116,10 @@ class ChocotissueService
 
     public function getUserRankings(
         int $page = 1,
-        int $prefId = null
+        ?int $prefId = null
     ): \Illuminate\Support\Collection {
-        if ($page < 1) {
-            throw new \InvalidArgumentException('Page must be greater than 0');
-        }
+        $this->validatePage($page);
+        $this->validatePref($prefId);
 
         $limit = 30;
         $offset = ($page - 1) * $limit;
@@ -140,11 +137,10 @@ class ChocotissueService
         array $displayedChocoShopTableIds = [],
         array $displayedNightShopTableIds = [],
         int $page = 1,
-        int $prefId = null
+        ?int $prefId = null
     ): \Illuminate\Support\Collection {
-        if ($page < 1) {
-            throw new \InvalidArgumentException('Page must be greater than 0');
-        }
+        $this->validatePage($page);
+        $this->validatePref($prefId);
 
         $limit = 10;
 
@@ -207,16 +203,14 @@ class ChocotissueService
 
     public function getShopRankingDetail(
         bool $isTimeline = true,
-        int $chocoShopTableId = null,
-        int $nightShopTableId = null,
+        ?int $chocoShopTableId = null,
+        ?int $nightShopTableId = null,
         int $page = 1
     ): array {
+        $this->validatePage($page);
+
         if (empty($chocoShopTableId) && empty($nightShopTableId)) {
             throw new \InvalidArgumentException('Shop must not be null');
-        }
-
-        if ($page < 1) {
-            throw new \InvalidArgumentException('Page must be greater than 0');
         }
 
         $limit = 30;
@@ -291,15 +285,13 @@ class ChocotissueService
 
     public function getHashtagDetail(
         bool $isTimeline = true,
-        int $hashtagId = null,
+        ?int $hashtagId = null,
         int $page = 1
     ): \Illuminate\Support\Collection {
+        $this->validatePage($page);
+
         if (empty($hashtagId) && empty($hashtagId)) {
             throw new \InvalidArgumentException('hashtag must not be null');
-        }
-
-        if ($page < 1) {
-            throw new \InvalidArgumentException('Page must be greater than 0');
         }
 
         $limit = 30;
@@ -353,14 +345,14 @@ class ChocotissueService
 
     public function getTissues(
         array $tissueIds,
-        int $page = 1
+        int $page = 1,
+        ?int $prefId = null
     ): \Illuminate\Support\Collection {
+        $this->validatePage($page);
+        $this->validatePref($prefId);
+
         if (empty($tissueIds)) {
             throw new \InvalidArgumentException('Tissue must not be null');
-        }
-
-        if ($page < 1) {
-            throw new \InvalidArgumentException('Page must be greater than 0');
         }
 
         $limit = 30;
@@ -447,7 +439,10 @@ class ChocotissueService
             : $this->tissueRepository->getMensTissues($tissueIds);
     }
 
-    // 提取共用的頁面驗證
+    /**
+     * @param int $page
+     * @return void
+     */
     private function validatePage(int $page): void
     {
         if ($page < 1) {
@@ -455,12 +450,13 @@ class ChocotissueService
         }
     }
 
-    // 提取共用的業務驗證
-    private function validateBusinessRules(int $page, ?int $prefId = null): void
+    /**
+     * @param int|null $prefId
+     * @return void
+     */
+    private function validatePref(?int $prefId = null): void
     {
-        $this->validatePage($page);
-
-        if ($prefId && $prefId < 1) {
+        if (!is_null($prefId) && $prefId < 1) {
             throw new \InvalidArgumentException('PrefId must be positive');
         }
     }

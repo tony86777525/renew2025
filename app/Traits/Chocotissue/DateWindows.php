@@ -26,6 +26,11 @@ trait DateWindows
         return (new Carbon('monday this week'));
     }
 
+    protected function snsWeekStartDate()
+    {
+        return (new Carbon('monday this week -2 day'));
+    }
+
     protected function lastWeekStartDate()
     {
         return (new Carbon('monday this week'))->subWeek();

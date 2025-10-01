@@ -23,7 +23,7 @@ class ListRepository
     public function getTimeline(
         int $limit,
         int $offset = 0,
-        int $prefId = null
+        ?int $prefId = null
     ): \Illuminate\Support\Collection {
         $query = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
             ->query()
@@ -50,7 +50,7 @@ class ListRepository
     public function getPcRecommendations(
         int $limit,
         int $offset = 0,
-        int $prefId = null
+        ?int $prefId = null
     ): \Illuminate\Support\Collection {
         $startDate = $this->lastChampionshipStartDatetime();
         $endDate = $this->nowDatetime();
@@ -94,7 +94,7 @@ class ListRepository
     public function getSpRecommendations(
         int $limit,
         int $offset = 0,
-        int $prefId = null
+        ?int $prefId = null
     ): \Illuminate\Support\Collection {
         $startDate = $this->lastChampionshipStartDatetime();
         $endDate = $this->nowDatetime();
@@ -128,11 +128,13 @@ class ListRepository
     public function getUserWeeklyRankings(
         int $limit,
         int $offset = 0,
-        int $prefId = null
+        ?int $prefId = null
     ): \Illuminate\Support\Collection {
         $startDate = $this->championshipStartDatetime();
         $endDate = $this->nowDatetime();
         $lastWeekStartDate = $this->lastWeekStartDate();
+        $weekStartDate = $this->weekStartDate();
+        $snsWeekStartDate = $this->snsWeekStartDate();
 
         $tissueQuery = $this->buildUserTissueQuery(
             $startDate,
@@ -145,12 +147,19 @@ class ListRepository
         $chocoGuestQuery = $this->buildChocoGuestQuery();
         $chocoShopQuery = $this->buildChocoShopQuery();
         $nightShopQuery = $this->buildNightShopQuery();
+        $tissueCommentQuery = $this->buildTissueCommentQuery();
 
-        $userScoreQuery = (new UserScoreQueryBuilder)->build(
+        $tissueQuery = (new UserScoreQueryBuilder)->buildTissueQueryBuild(
+            $tissueQuery,
+            $tissueCommentQuery
+        );
+        $userScoreQuery = (new UserScoreQueryBuilder)->buildWeeklyScoreQueryBuild(
             $tissueQuery,
             $weeklyRankingPointQuery,
             $chocoMypageQuery,
-            $chocoGuestQuery
+            $chocoGuestQuery,
+            $weekStartDate,
+            $snsWeekStartDate
         );
 
         $query = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
@@ -166,6 +175,8 @@ class ListRepository
                 "user_scores.choco_guest_id",
                 "user_scores.point",
                 "user_scores.total_good_count",
+                "user_scores.total_sns_count",
+                "user_scores.total_comment_count",
                 "user_scores.tissue_count",
                 "user_scores.last_tissue_id"
             )
@@ -189,7 +200,7 @@ class ListRepository
     public function getUserRankings(
         int $limit,
         int $offset = 0,
-        int $prefId = null
+        ?int $prefId = null
     ): \Illuminate\Support\Collection {
         $startDate = $this->championshipStartDatetime();
         $endDate = $this->nowDatetime();
@@ -205,8 +216,13 @@ class ListRepository
         $chocoGuestQuery = $this->buildChocoGuestQuery();
         $chocoShopQuery = $this->buildChocoShopQuery();
         $nightShopQuery = $this->buildNightShopQuery();
+        $tissueCommentQuery = $this->buildTissueCommentQuery();
 
-        $userScoreQuery = (new UserScoreQueryBuilder)->build(
+        $tissueQuery = (new UserScoreQueryBuilder)->buildTissueQueryBuild(
+            $tissueQuery,
+            $tissueCommentQuery
+        );
+        $userScoreQuery = (new UserScoreQueryBuilder)->buildScoreQueryBuild(
             $tissueQuery,
             $rankingPointQuery,
             $chocoMypageQuery,
@@ -225,6 +241,9 @@ class ListRepository
                 "user_scores.choco_mypage_id",
                 "user_scores.choco_guest_id",
                 "user_scores.point",
+                "user_scores.total_good_count",
+                "user_scores.total_sns_count",
+                "user_scores.total_comment_count",
                 "user_scores.last_tissue_id"
             )
             ->fromSub($userScoreQuery, 'user_scores')
@@ -298,9 +317,9 @@ class ListRepository
     }
 
     public function getShopRankingDetailTimeline(
-        array $chocoShopTableIds = null,
-        array $nightShopTableIds = null,
-        int $limit,
+        ?array $chocoShopTableIds = null,
+        ?array $nightShopTableIds = null,
+        ?int $limit = null,
         int $offset = 0
     ): \Illuminate\Support\Collection {
         $startDate = $this->championshipStartDatetime();
@@ -344,15 +363,19 @@ class ListRepository
             )"), "DESC")
             ->orderBy("tissue_id", 'DESC')
             ->skip($offset)
-            ->take($limit);
+            ->when(!empty($limit), function ($query) use ($limit, $offset) {
+                $query
+                    ->skip($offset)
+                    ->take($limit);
+            });
 
         return $query->get();
     }
 
     public function getShopRankingDetailRanking(
-        array $chocoShopTableIds = null,
-        array $nightShopTableIds = null,
-        int $limit = null,
+        ?array $chocoShopTableIds = null,
+        ?array $nightShopTableIds = null,
+        ?int $limit = null,
         int $offset = 0
     ): \Illuminate\Support\Collection {
         $startDate = $this->championshipStartDatetime();
@@ -395,7 +418,7 @@ class ListRepository
 
     public function getHashtags(
         array $displayedHashtagIds,
-        int $limit = null
+        ?int $limit = null
     ): \Illuminate\Support\Collection {
         $startDate = $this->championshipStartDatetime();
         $endDate = $this->nowDatetime();
@@ -441,8 +464,8 @@ class ListRepository
     }
 
     public function getHashtagDetailTimeline(
-        int $hashtagId = null,
-        int $limit,
+        ?int $hashtagId = null,
+        ?int $limit = null,
         int $offset = 0
     ): \Illuminate\Support\Collection {
         $startDate = $this->championshipStartDatetime();
@@ -496,15 +519,18 @@ class ListRepository
             })
             ->orderBy("last_update_datetime", "DESC")
             ->orderBy("tissue_id", 'DESC')
-            ->skip($offset)
-            ->take($limit);
+            ->when(!empty($limit), function ($query) use ($limit, $offset) {
+                $query
+                    ->skip($offset)
+                    ->take($limit);
+            });
 
         return $query->get();
     }
 
     public function getHashtagDetailRanking(
-        int $hashtagId = null,
-        int $limit = null,
+        ?int $hashtagId = null,
+        ?int $limit = null,
         int $offset = 0
     ): \Illuminate\Support\Collection {
         $startDate = $this->championshipStartDatetime();

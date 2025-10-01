@@ -26,8 +26,10 @@
                 <div style="position: absolute;left: 0;top: 0;font-weight: bold;">
                     <div>User: {{ $row->tissue->user_type }}</div>
                     <div>User ID: <span style="color: red;">{{ $row->tissue->user_id }}</span></div>
-                    <div>LIKE Count: <span style="color: red;">{{ $row->tissue->good_count + $row->tissue->total_good_count }}</span></div>
-                    <div>SNS Count: <span style="color: red;">{{ $row->tissue->sns_count }}</span></div>
+                    <div>Point: <span style="color: red;">{{ $row->point }}</span></div>
+                    <div>LIKE Count: <span style="color: red;">{{ $row->total_good_count }}</span></div>
+                    <div>SNS Count: <span style="color: red;">{{ $row->total_sns_count }}</span></div>
+                    <div>COMMENT Count: <span style="color: red;">{{ $row->total_comment_count }}</span></div>
                 </div>
             </div>
         </div>
