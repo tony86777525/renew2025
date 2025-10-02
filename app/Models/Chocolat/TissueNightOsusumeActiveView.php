@@ -96,4 +96,14 @@ class TissueNightOsusumeActiveView extends Model
 
         $this->connection = env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat');
     }
+
+    public function scopePublished($query)
+    {
+        return $query->where($this->table . '.published_flg', 1);
+    }
+
+    public function scopeTissueStatusActive($query)
+    {
+        return $query->where($this->table . '.tissue_status', 1);
+    }
 }

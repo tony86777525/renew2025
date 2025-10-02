@@ -280,4 +280,14 @@ class Tissue extends Model
 
         return $this->guest_id;
     }
+
+    public function scopePublished($query)
+    {
+        return $query->where('tissue.published_flg', 1);
+    }
+
+    public function scopeTissueStatusActive($query)
+    {
+        return $query->where('tissue.tissue_status', 1);
+    }
 }

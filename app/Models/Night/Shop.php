@@ -57,4 +57,15 @@ class Shop extends Model
 
         return config('myapp.storage_disk') === 's3' ? s3_2_cf($path) : $path;
     }
+
+    /**
+     * status_id が 「公開済み」の店舗だけに限定するクエリスコープ
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopePublished($query)
+    {
+        return $query->where('shops.status_id', 4);
+    }
 }
