@@ -5,14 +5,15 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Http\Response;
 use Illuminate\Contracts\View\View;
 use InvalidArgumentException;
 use Exception;
 use App\Services\ChocotissueService;
+use Jenssegers\Agent\Facades\Agent;
 
 class ChocotissueController extends Controller
 {
+    private ChocotissueService $chocotissueService;
     /**
      * Constructor
      *
