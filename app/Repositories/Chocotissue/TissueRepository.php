@@ -3,6 +3,7 @@
 namespace App\Repositories\Chocotissue;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\Collection;
 use App\Models\Chocolat\Tissue;
 use App\Models\Chocolat\MensTissue;
 use App\QueryBuilders\Chocotissue\UserTopTissueQueryBuilder;
@@ -16,7 +17,21 @@ class TissueRepository
     use DateWindows;
     use ExcludedUsers;
 
-    public function getTissues(array $ids): \Illuminate\Database\Eloquent\Collection
+    private UserTopTissueQueryBuilder $userTopTissueQueryBuilder;
+
+    public function __construct(
+        UserTopTissueQueryBuilder $userTopTissueQueryBuilder
+    ) {
+        $this->userTopTissueQueryBuilder = $userTopTissueQueryBuilder;
+    }
+
+    /**
+     * Get tissues.
+     *
+     * @param array $ids
+     * @return Collection
+     */
+    public function getTissues(array $ids): Collection
     {
         $query = Tissue::query()
             ->whereIn('id', $ids);
@@ -24,7 +39,13 @@ class TissueRepository
         return $query->get();
     }
 
-    public function getMensTissues(array $ids): \Illuminate\Database\Eloquent\Collection
+    /**
+     * Get mens tissues.
+     *
+     * @param array $ids
+     * @return Collection
+     */
+    public function getMensTissues(array $ids): Collection
     {
         $query = MensTissue::query()
             ->whereIn('id', $ids);
@@ -32,12 +53,21 @@ class TissueRepository
         return $query->get();
     }
 
+    /**
+     * Get user ranking top tissue of users.
+     *
+     * @param array $chocoCastIds
+     * @param array $nightCastIds
+     * @param array $chocoMypageIds
+     * @param array $chocoGuestIds
+     * @return Collection
+     */
     public function getUserRankingTopTissueOfUsers(
         array $chocoCastIds,
         array $nightCastIds,
         array $chocoMypageIds,
         array $chocoGuestIds
-    ): \Illuminate\Database\Eloquent\Collection {
+    ): Collection {
         $startDate = $this->championshipStartDatetime();
         $endDate = $this->nowDatetime();
 
@@ -50,9 +80,12 @@ class TissueRepository
         $chocoMypageQuery = $this->buildChocoMypageQuery();
         $chocoGuestQuery = $this->buildChocoGuestQuery();
 
-        $build = new UserTopTissueQueryBuilder;
-        $userTissueQuery = $build->buildUserTissueQuery($tissueQuery, $chocoMypageQuery, $chocoGuestQuery);
-        $orderTissues = $build->buildUserRankingOrderTissueQuery($userTissueQuery);
+        $userTissueQuery = $this->userTopTissueQueryBuilder->buildUserTissueQuery(
+            $tissueQuery,
+            $chocoMypageQuery,
+            $chocoGuestQuery
+        );
+        $orderTissues = $this->userTopTissueQueryBuilder->buildUserRankingOrderTissueQuery($userTissueQuery);
 
         $query = Tissue::query()
             ->fromSub($orderTissues, 'tissues')
@@ -77,10 +110,17 @@ class TissueRepository
         return $query->get();
     }
 
+    /**
+     * Get shop ranking top tissue of users.
+     *
+     * @param array $chocoShopTableIds
+     * @param array $nightShopTableIds
+     * @return Collection
+     */
     public function getShopRankingTopTissueOfUsers(
         array $chocoShopTableIds,
         array $nightShopTableIds
-    ): \Illuminate\Database\Eloquent\Collection {
+    ): Collection {
         $startDate = $this->championshipStartDatetime();
         $endDate = $this->nowDatetime();
 
@@ -94,9 +134,15 @@ class TissueRepository
         $chocoGuestQuery = $this->buildChocoGuestQuery();
         $tissueCommentLastOneQuery = $this->buildTissueCommentLastOneQuery();
 
-        $build = new UserTopTissueQueryBuilder;
-        $userTissueQuery = $build->buildUserTissueQuery($tissueQuery, $chocoMypageQuery, $chocoGuestQuery);
-        $orderTissues = $build->buildShopRankingOrderTissueQuery($userTissueQuery, $tissueCommentLastOneQuery);
+        $userTissueQuery = $this->userTopTissueQueryBuilder->buildUserTissueQuery(
+            $tissueQuery,
+            $chocoMypageQuery,
+            $chocoGuestQuery
+        );
+        $orderTissues = $this->userTopTissueQueryBuilder->buildShopRankingOrderTissueQuery(
+            $userTissueQuery,
+            $tissueCommentLastOneQuery
+        );
 
         $orderTissues
             ->where(function ($query) use ($chocoShopTableIds, $nightShopTableIds) {
@@ -117,9 +163,34 @@ class TissueRepository
         return $query->get();
     }
 
+    /**
+     * Get hashtag top tissue of users.
+     *
+     * @param array $hashtagIds
+     * @return Collection
+     */
     public function getHashtagTopTissueOfUsers(
         array $hashtagIds
-    ): \Illuminate\Database\Eloquent\Collection {
+    ): Collection {
+        /**
+         * 為每個指定的 hashtag，找出最多 10 篇具代表性的投稿。
+         *
+         * 何謂「代表性投稿」？
+         * 在同一個 hashtag 下，每個「獨立用戶」所發布的「最新」一篇投稿，即為該用戶在此 hashtag 下的代表性投稿。
+         *
+         * 實現邏輯 (LOGIC): 這是一個複雜的「組內取 Top N」問題，透過兩階段的窗函數 (Window Functions) 來解決。
+         *
+         * 階段一 (內部查詢 - `tissueShowNumQuery`): 找出每個用戶在每個 hashtag 下的最新一篇投稿。
+         *  - `PARTITION BY hashtag_id, mypage_id, cast_id, ...`: 將投稿依照「Hashtag」和「用戶ID」進行分組。
+         *  - `ORDER BY last_update_datetime DESC`: 在每個分組內，依照投稿的最後更新時間降序排列。
+         *  - `ROW_NUMBER() as show_num`: 為組內的每筆資料賦予排名。`show_num = 1` 的就是該用戶在此 hashtag 下的最新投稿。
+         *
+         * 階段二 (外部查詢 - `$query`): 從階段一的結果中，為每個 hashtag 選出前 10 篇代表性投稿。
+         *  - `PARTITION BY hashtag_id`: 將所有用戶的「最新投稿」(`show_num = 1`) 依照 hashtag 進行分組。
+         *  - `ORDER BY last_update_datetime DESC`: 在每個 hashtag 分組內，將這些代表性投稿依照時間降序排列。
+         *  - `ROW_NUMBER() as order_number`: 為每個 hashtag 內的代表性投稿賦予最終排名。
+         *  - `WHERE order_number <= 10`: 最終選出每個 hashtag 的前 10 名。
+         */
         $startDate = $this->championshipStartDatetime();
         $endDate = $this->nowDatetime();
 
@@ -133,7 +204,7 @@ class TissueRepository
         $chocoGuestQuery = $this->buildChocoGuestQuery();
         $tissueCommentLastOneQuery = $this->buildTissueCommentLastOneQuery();
 
-        $tissueQuery = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        $tissueQuery = DB::connection('mysql-chocolat')
             ->query()
             ->fromSub($tissueQuery, 'tissues')
             ->select(
@@ -157,7 +228,7 @@ class TissueRepository
                 'tissues.id'
             );
 
-        $tissueShowNumQuery = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        $tissueShowNumQuery = DB::connection('mysql-chocolat')
             ->query()
             ->fromSub(function ($query) use ($tissueQuery, $chocoMypageQuery, $chocoGuestQuery, $hashtagIds) {
                 $query
@@ -219,13 +290,36 @@ class TissueRepository
         return $query->get();
     }
 
+    /**
+     * Get hashtag detail rank top tissue of users.
+     *
+     * @param integer $hashtagId
+     * @param array $chocoCastIds
+     * @param array $nightCastIds
+     * @param array $chocoMypageIds
+     * @param array $chocoGuestIds
+     * @return Collection
+     */
     public function getHashtagDetailRankTopTissueOfUsers(
         int $hashtagId,
         array $chocoCastIds,
         array $nightCastIds,
         array $chocoMypageIds,
         array $chocoGuestIds
-    ): \Illuminate\Database\Eloquent\Collection {
+    ): Collection {
+        /**
+         * 獲取指定 Hashtag 下，各用戶評分最高的代表性投稿。
+         *
+         * 此方法用於 Hashtag 詳情頁的「排名」模式，為每個參與排名的用戶（不論是 cast, mypage 還是 guest）
+         * 找出他們在該 Hashtag 下評分最高的一篇投稿。
+         *
+         * 實現邏輯 (LOGIC): 這是一個「組內取 Top 1」問題，透過 SQL 窗函數 (Window Functions) 來高效解決。
+         *
+         * - `PARTITION BY ..., tissues.mypage_id, tissues.cast_id, ...`: 將投稿依照「用戶ID」進行分組。
+         * - `ORDER BY (讚數 + 加權讚數) DESC, 觀看數 DESC`: 在每個用戶的分組內，依照評分標準（讚數優先，其次觀看數）排序。
+         * - `ROW_NUMBER() as show_num`: 為組內的每筆資料賦予排名。`show_num = 1` 的就是該用戶在此 hashtag 下評分最高的投稿。
+         * - 外部查詢的 `WHERE show_num = 1`: 最終只選出每個用戶評分最高的那一篇投稿。
+         */
         $startDate = $this->championshipStartDatetime();
         $endDate = $this->nowDatetime();
 
@@ -238,7 +332,7 @@ class TissueRepository
         $chocoMypageQuery = $this->buildChocoMypageQuery();
         $chocoGuestQuery = $this->buildChocoGuestQuery();
 
-        $tissueShowNumQuery = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        $tissueShowNumQuery = DB::connection('mysql-chocolat')
             ->query()
             ->from('tissue_hashtags', 'hashtags')
             ->rightJoinSub($tissueQuery, 'tissues', function ($join) {

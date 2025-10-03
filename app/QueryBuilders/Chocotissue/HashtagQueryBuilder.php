@@ -13,7 +13,7 @@ class HashtagQueryBuilder
         QueryBuilder $chocoGuestQuery,
         QueryBuilder $tissueCommentLastOneQuery
     ): QueryBuilder {
-        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        return DB::connection('mysql-chocolat')
         ->query()
         ->select(
             "tissues.*",
@@ -45,7 +45,7 @@ class HashtagQueryBuilder
         QueryBuilder $hashtagQuery,
         QueryBuilder $eligibleTissueQuery
     ): QueryBuilder {
-        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        return DB::connection('mysql-chocolat')
             ->query()
             ->select(
                 "hashtags.id AS hashtag_id",
@@ -75,7 +75,7 @@ class HashtagQueryBuilder
     public function buildTissueHashtagShowNum(
         QueryBuilder $tissueHashtagQuery
     ): QueryBuilder {
-        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        return DB::connection('mysql-chocolat')
             ->query()
             ->select(
                 '*',
@@ -94,7 +94,7 @@ class HashtagQueryBuilder
     public function buildRanking(
         QueryBuilder $tissueHashtagShowNumQuery
     ): QueryBuilder {
-        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        return DB::connection('mysql-chocolat')
             ->query()
             ->select(
                 "*",

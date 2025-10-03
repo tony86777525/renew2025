@@ -15,8 +15,13 @@
 <body>
 <div>
     @foreach($data as $row)
-        <div>{{ $row->choco_shop_table_id }} | {{ $row->choco_shop_pref_id }} & {{ $row->night_shop_table_id }} | {{ $row->night_shop_pref_id }}</div>
-        <div>Casts：{{ $row->cast_ids }} </div><BR>
+        <div style="display: flex;align-items: center;gap: 30px;">
+            <div style="background: #f99;border-radius: 50%;padding: 10px;color: white;font-weight: bold;font-size: 32px;width: 50px;height: 50px;text-align: center;"> {{ $row->rank_num }}</div>
+            <div style="display: flex;flex-direction: column;">
+                <div>{{ $row->choco_shop_table_id }} | {{ $row->choco_shop_pref_id }} & {{ $row->night_shop_table_id }} | {{ $row->night_shop_pref_id }}</div>
+                <div>Casts：{{ $row->cast_ids }} </div><BR>
+            </div>
+        </div>
         @foreach($row->tissues as $tissue)
             <div style="display: inline-flex;flex-direction: row;align-items: flex-start;flex-wrap: wrap;position: relative; margin: 0 0 50px;">
                 <div style="width: 18vw;">

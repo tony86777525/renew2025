@@ -14,6 +14,13 @@
 </head>
 <body>
 <div>
+    <div style="display: flex;align-items: center;gap: 30px;font-weight: bold;">
+        <div style="background: #f99;border-radius: 50%;padding: 10px;color: white;font-size: 32px;width: 50px;height: 50px;text-align: center;"> {{ $shop->rank_num }}</div>
+        <div style="display: flex;flex-direction: column;">
+            <div>{{ $shop->choco_shop_table_id }} | {{ $shop->choco_shop_pref_id }} & {{ $shop->night_shop_table_id }} | {{ $shop->night_shop_pref_id }}</div>
+            <div>Casts：{{ $shop->cast_ids }} </div><BR>
+        </div>
+    </div>
     @foreach($casts as $row)
         <div style="display: inline-flex;flex-direction: row;align-items: flex-start;flex-wrap: wrap;position: relative; margin: 0 0 50px;">
             <div style="width: 18vw;">

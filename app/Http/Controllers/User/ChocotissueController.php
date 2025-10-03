@@ -8,24 +8,64 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Contracts\View\View;
 use InvalidArgumentException;
 use Exception;
-use App\Services\ChocotissueService;
+use App\Services\Chocotissue\TimelineService;
+use App\Services\Chocotissue\RecommendationService;
+use App\Services\Chocotissue\UserWeeklyRankingService;
+use App\Services\Chocotissue\UserRankingService;
+use App\Services\Chocotissue\ShopRankingService;
+use App\Services\Chocotissue\ShopRankingDetailService;
+use App\Services\Chocotissue\HashtagService;
+use App\Services\Chocotissue\HashtagDetailService;
+use App\Services\Chocotissue\LikedService;
+use App\Services\Chocotissue\DetailService;
 use Jenssegers\Agent\Facades\Agent;
 
 class ChocotissueController extends Controller
 {
-    private ChocotissueService $chocotissueService;
+    private TimelineService $timelineService;
+    private RecommendationService $recommendationService;
+    private UserWeeklyRankingService $userWeeklyRankingService;
+    private UserRankingService $userRankingService;
+    private ShopRankingService $shopRankingService;
+    private ShopRankingDetailService $shopRankingDetailService;
+    private HashtagService $hashtagService;
+    private HashtagDetailService $hashtagDetailService;
+    private LikedService $likedService;
+    private DetailService $detailService;
+
     /**
      * Constructor
      *
      * @return void
      */
-    public function __construct(ChocotissueService $chocotissueService)
-    {
-        $this->chocotissueService = $chocotissueService;
+    public function __construct(
+        TimelineService          $timelineService,
+        RecommendationService    $recommendationService,
+        UserWeeklyRankingService $userWeeklyRankingService,
+        UserRankingService       $userRankingService,
+        ShopRankingService       $shopRankingService,
+        ShopRankingDetailService $shopRankingDetailService,
+        HashtagService           $hashtagService,
+        HashtagDetailService     $hashtagDetailService,
+        LikedService             $likedService,
+        DetailService            $detailService,
+    ) {
+        $this->timelineService = $timelineService;
+        $this->recommendationService = $recommendationService;
+        $this->userWeeklyRankingService = $userWeeklyRankingService;
+        $this->userRankingService = $userRankingService;
+        $this->shopRankingService = $shopRankingService;
+        $this->shopRankingDetailService = $shopRankingDetailService;
+        $this->hashtagService = $hashtagService;
+        $this->hashtagDetailService = $hashtagDetailService;
+        $this->likedService = $likedService;
+        $this->detailService = $detailService;
     }
 
     /**
-     * @param Request $request
+     * The Handle for liked tissue and recommendation.
+     *
+     * @param Request      $request
      * @param integer|null $prefId
      * @return View|object
      */
@@ -48,20 +88,18 @@ class ChocotissueController extends Controller
     public function timeline(Request $request, ?int $prefId = null)
     {
         try {
-            $data = $this->chocotissueService->getTimeline(1, $prefId);
+            $data = $this->timelineService->getTimelineData(1, $prefId);
 
             return view('user.chocotissue.timeline', compact(
                 'data'
             ));
         } catch (InvalidArgumentException $e) {
-            // 參數錯誤 - 400
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
             ], 400);
         } catch (Exception $e) {
-            // 系統錯誤 - 500
-            Log::error('Chocotissue recommendation error', [
+            Log::error('Chocotissue timeline error', [
                 'request' => $request->all(),
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -75,16 +113,16 @@ class ChocotissueController extends Controller
     }
 
     /**
-     * Recommendations
+     * Recommendation
      *
-     * @param Request $request
+     * @param Request      $request
      * @param integer|null $prefId
      * @return View|object
      */
     public function recommendations(Request $request, ?int $prefId = null)
     {
         try {
-            $data = $this->chocotissueService->getRecommendations(
+            $data = $this->recommendationService->getRecommendationData(
                 $request->get('is_pc', true),
                 $request->get('page', 1),
                 $prefId ?? null
@@ -94,13 +132,11 @@ class ChocotissueController extends Controller
                 'data'
             ));
         } catch (InvalidArgumentException $e) {
-            // 參數錯誤 - 400
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
             ], 400);
         } catch (Exception $e) {
-            // 系統錯誤 - 500
             Log::error('Chocotissue recommendation error', [
                 'request' => $request->all(),
                 'error' => $e->getMessage(),
@@ -115,7 +151,7 @@ class ChocotissueController extends Controller
     }
 
     /**
-     * UserWeeklyRankings
+     * User weekly ranking
      *
      * @param Request $request
      * @param integer|null $prefId
@@ -124,20 +160,18 @@ class ChocotissueController extends Controller
     public function userWeeklyRankings(Request $request, ?int $prefId = null)
     {
         try {
-            $data = $this->chocotissueService->getUserWeeklyRankings(1, $prefId);
+            $data = $this->userWeeklyRankingService->getUserWeeklyRankingData(1, $prefId);
 
             return view('user.chocotissue.user-ranking-weekly', compact(
                 'data'
             ));
         } catch (InvalidArgumentException $e) {
-            // 參數錯誤 - 400
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
             ], 400);
         } catch (Exception $e) {
-            // 系統錯誤 - 500
-            Log::error('Chocotissue recommendation error', [
+            Log::error('Chocotissue user weekly rankings error', [
                 'request' => $request->all(),
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -151,7 +185,7 @@ class ChocotissueController extends Controller
     }
 
     /**
-     * UserRankings
+     * User ranking
      *
      * @param Request $request
      * @param integer|null $prefId
@@ -160,20 +194,18 @@ class ChocotissueController extends Controller
     public function userRankings(Request $request, ?int $prefId = null)
     {
         try {
-            $data = $this->chocotissueService->getUserRankings(1, $prefId);
+            $data = $this->userRankingService->getUserRankingData(1, $prefId);
 
             return view('user.chocotissue.user-ranking', compact(
                 'data'
             ));
         } catch (InvalidArgumentException $e) {
-            // 參數錯誤 - 400
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
             ], 400);
         } catch (Exception $e) {
-            // 系統錯誤 - 500
-            Log::error('Chocotissue recommendation error', [
+            Log::error('Chocotissue user ranking error', [
                 'request' => $request->all(),
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -187,7 +219,7 @@ class ChocotissueController extends Controller
     }
 
     /**
-     * ShopRankings
+     * Shop ranking
      *
      * @param Request $request
      * @param integer|null $prefId
@@ -200,7 +232,7 @@ class ChocotissueController extends Controller
         $page = 1;
 
         try {
-            $data = $this->chocotissueService->getShopRankings(
+            $data = $this->shopRankingService->getShopRankingData(
                 $displayedChocoShopTableIds,
                 $displayedNightShopTableIds,
                 $page,
@@ -211,14 +243,12 @@ class ChocotissueController extends Controller
                 'data'
             ));
         } catch (InvalidArgumentException $e) {
-            // 參數錯誤 - 400
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
             ], 400);
         } catch (Exception $e) {
-            // 系統錯誤 - 500
-            Log::error('Chocotissue recommendation error', [
+            Log::error('Chocotissue shop ranking error', [
                 'request' => $request->all(),
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -232,7 +262,7 @@ class ChocotissueController extends Controller
     }
 
     /**
-     * ShopRankingDetail
+     * Shop ranking detail
      *
      * @param Request $request
      * @return View|object
@@ -248,7 +278,7 @@ class ChocotissueController extends Controller
         $page = 1;
 
         try {
-            list($shop, $casts) = $this->chocotissueService->getShopRankingDetail(
+            list($shop, $casts) = $this->shopRankingDetailService->getShopRankingDetailData(
                 $isTimeline,
                 $chocoShopTableId,
                 $nightShopTableId,
@@ -267,14 +297,12 @@ class ChocotissueController extends Controller
                 ));
             }
         } catch (InvalidArgumentException $e) {
-            // 參數錯誤 - 400
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
             ], 400);
         } catch (Exception $e) {
-            // 系統錯誤 - 500
-            Log::error('Chocotissue recommendation error', [
+            Log::error('Chocotissue shop ranking detail error', [
                 'request' => $request->all(),
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -288,7 +316,7 @@ class ChocotissueController extends Controller
     }
 
     /**
-     * Hashtags
+     * Hashtag
      *
      * @param Request $request
      * @return View|object
@@ -298,20 +326,18 @@ class ChocotissueController extends Controller
         $displayedHashtagIds = [];
 
         try {
-            $data = $this->chocotissueService->getHashtags($displayedHashtagIds);
+            $data = $this->hashtagService->getHashtagData($displayedHashtagIds);
 
             return view('user.chocotissue.hashtag', compact(
                 'data'
             ));
         } catch (InvalidArgumentException $e) {
-            // 參數錯誤 - 400
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
             ], 400);
         } catch (Exception $e) {
-            // 系統錯誤 - 500
-            Log::error('Chocotissue recommendation error', [
+            Log::error('Chocotissue hashtag error', [
                 'request' => $request->all(),
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -325,7 +351,7 @@ class ChocotissueController extends Controller
     }
 
     /**
-     * Hashtag Detail
+     * Hashtag detail
      *
      * @param Request $request
      * @return View|object
@@ -336,7 +362,7 @@ class ChocotissueController extends Controller
         $page = 1;
 
         try {
-            $data = $this->chocotissueService->getHashtagDetail(
+            $data = $this->hashtagDetailService->getHashtagDetailData(
                 $isTimeline,
                 $hashtagId,
                 $page
@@ -352,14 +378,12 @@ class ChocotissueController extends Controller
                 ));
             }
         } catch (InvalidArgumentException $e) {
-            // 參數錯誤 - 400
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
             ], 400);
         } catch (Exception $e) {
-            // 系統錯誤 - 500
-            Log::error('Chocotissue recommendation error', [
+            Log::error('Chocotissue hashtag detail error', [
                 'request' => $request->all(),
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -373,7 +397,7 @@ class ChocotissueController extends Controller
     }
 
     /**
-     * Liked Tissue
+     * Liked tissue
      *
      * @param Request $request
      * @param integer|null $prefId
@@ -385,7 +409,7 @@ class ChocotissueController extends Controller
         $page = 1;
 
         try {
-            $data = $this->chocotissueService->getTissues(
+            $data = $this->likedService->getLikedData(
                 $tissueIds,
                 $page,
                 $prefId
@@ -395,14 +419,12 @@ class ChocotissueController extends Controller
                 'data'
             ));
         } catch (InvalidArgumentException $e) {
-            // 參數錯誤 - 400
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
             ], 400);
         } catch (Exception $e) {
-            // 系統錯誤 - 500
-            Log::error('Chocotissue recommendation error', [
+            Log::error('Chocotissue liked tissue error', [
                 'request' => $request->all(),
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -424,24 +446,18 @@ class ChocotissueController extends Controller
     public function detail(Request $request, $tissueId)
     {
         try {
-            $data = $this->chocotissueService->getTissues(
-                [$tissueId]
-            );
-
-            $data = $data->first();
+            $data = $this->detailService->getDetailData($tissueId);
 
             return view('user.chocotissue.detail', compact(
                 'data'
             ));
         } catch (InvalidArgumentException $e) {
-            // 參數錯誤 - 400
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
             ], 400);
         } catch (Exception $e) {
-            // 系統錯誤 - 500
-            Log::error('Chocotissue recommendation error', [
+            Log::error('Chocotissue detail error', [
                 'request' => $request->all(),
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()

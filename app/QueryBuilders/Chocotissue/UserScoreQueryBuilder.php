@@ -5,15 +5,20 @@ namespace App\QueryBuilders\Chocotissue;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Database\Query\Builder AS QueryBuilder;
-use Illuminate\Database\Eloquent\Builder AS EloquentBuilder;
+use Illuminate\Database\Query\Expression;
 
 class UserScoreQueryBuilder
 {
+    private const GROUP_KEY_CHOCO_CAST = 'choco_cast_';
+    private const GROUP_KEY_NIGHT_CAST = 'night_cast_';
+    private const GROUP_KEY_CHOCO_MYPAGE = 'choco_mypage_';
+    private const GROUP_KEY_CHOCO_GUEST = 'choco_guest_';
+
     public function buildTissueQueryBuild(
         QueryBuilder $tissueQuery,
         QueryBuilder $tissueCommentQuery
     ): QueryBuilder {
-        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        return DB::connection('mysql-chocolat')
             ->query()
             ->select(
                 DB::raw('MAX(tissues.id) AS id'),
@@ -46,7 +51,7 @@ class UserScoreQueryBuilder
         Carbon $weekStartDate,
         Carbon $snsWeekStartDate
     ): QueryBuilder {
-        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        return DB::connection('mysql-chocolat')
             ->query()
             ->select(
                 DB::raw("MAX(choco_casts.id) AS choco_cast_id"),
@@ -110,20 +115,7 @@ class UserScoreQueryBuilder
             ->orWhereNotNull('night_casts.id')
             ->orWhereNotNull('choco_guests.id')
             ->orWhereNotNull('choco_mypages.id')
-            ->groupBy(DB::raw("
-                CASE
-                    WHEN night_casts_binding_choco_casts.id IS NOT NULL THEN
-                        CONCAT('choco_cast_', night_casts_binding_choco_casts.id)
-                    WHEN choco_casts.id IS NOT NULL THEN
-                        CONCAT('choco_cast_', choco_casts.id)
-                    WHEN night_casts.id IS NOT NULL THEN
-                        CONCAT('night_cast_', night_casts.id)
-                    WHEN choco_mypages.id IS NOT NULL THEN
-                        CONCAT('choco_mypage', choco_mypages.id)
-                    WHEN choco_guests.id IS NOT NULL THEN
-                        CONCAT('choco_guest', choco_guests.id)
-                END
-            "));
+            ->groupBy($this->getCanonicalUserGroupingExpression());
     }
 
     public function buildScoreQueryBuild(
@@ -132,7 +124,7 @@ class UserScoreQueryBuilder
         QueryBuilder $chocoMypageQuery,
         QueryBuilder $chocoGuestQuery
     ): QueryBuilder {
-        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        return DB::connection('mysql-chocolat')
             ->query()
             ->select(
                 DB::raw("MAX(choco_casts.id) AS choco_cast_id"),
@@ -178,27 +170,14 @@ class UserScoreQueryBuilder
             ->orWhereNotNull('night_casts.id')
             ->orWhereNotNull('choco_guests.id')
             ->orWhereNotNull('choco_mypages.id')
-            ->groupBy(DB::raw("
-                CASE
-                    WHEN night_casts_binding_choco_casts.id IS NOT NULL THEN
-                        CONCAT('choco_cast_', night_casts_binding_choco_casts.id)
-                    WHEN choco_casts.id IS NOT NULL THEN
-                        CONCAT('choco_cast_', choco_casts.id)
-                    WHEN night_casts.id IS NOT NULL THEN
-                        CONCAT('night_cast_', night_casts.id)
-                    WHEN choco_mypages.id IS NOT NULL THEN
-                        CONCAT('choco_mypage', choco_mypages.id)
-                    WHEN choco_guests.id IS NOT NULL THEN
-                        CONCAT('choco_guest', choco_guests.id)
-                END
-            "));
+            ->groupBy($this->getCanonicalUserGroupingExpression());
     }
 
     public function castQueryBuild(
         QueryBuilder $tissueQuery,
         QueryBuilder $weeklyOrTotalRankingPointQuery
     ): QueryBuilder {
-        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        return DB::connection('mysql-chocolat')
             ->query()
             ->select(
                 DB::raw("MAX(choco_casts.id) AS choco_cast_id"),
@@ -240,5 +219,35 @@ class UserScoreQueryBuilder
                         CONCAT('night_cast_', night_casts.id)
                 END
             "));
+    }
+
+    /**
+     * Generates the raw SQL expression for grouping different user types into a canonical ID.
+     * This is the core logic for user identity normalization in rankings.
+     *
+     * @return Expression
+     */
+    private function getCanonicalUserGroupingExpression(): Expression
+    {
+        $sql = "
+            CASE
+                -- A choco_cast bound to a night_cast takes precedence for grouping to unify identity.
+                WHEN night_casts_binding_choco_casts.id IS NOT NULL THEN
+                    CONCAT('" . self::GROUP_KEY_CHOCO_CAST . "', night_casts_binding_choco_casts.id)
+                -- Standard choco_cast.
+                WHEN choco_casts.id IS NOT NULL THEN
+                    CONCAT('" . self::GROUP_KEY_CHOCO_CAST . "', choco_casts.id)
+                -- Standard night_cast.
+                WHEN night_casts.id IS NOT NULL THEN
+                    CONCAT('" . self::GROUP_KEY_NIGHT_CAST . "', night_casts.id)
+                -- Standard mypage user.
+                WHEN choco_mypages.id IS NOT NULL THEN
+                    CONCAT('" . self::GROUP_KEY_CHOCO_MYPAGE . "', choco_mypages.id)
+                -- Standard guest user.
+                WHEN choco_guests.id IS NOT NULL THEN
+                    CONCAT('" . self::GROUP_KEY_CHOCO_GUEST . "', choco_guests.id)
+            END";
+
+        return DB::raw($sql);
     }
 }

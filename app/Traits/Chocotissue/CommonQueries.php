@@ -19,7 +19,7 @@ trait CommonQueries
 {
     protected function buildChocoMypageQuery()
     {
-        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        return DB::connection('mysql-chocolat')
             ->query()
             ->select('mypage_mains.id')
             ->from((new MypageMain)->getTable())
@@ -30,7 +30,7 @@ trait CommonQueries
 
     protected function buildChocoGuestQuery()
     {
-        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        return DB::connection('mysql-chocolat')
             ->query()
             ->select('id')
             ->from((new Guest)->getTable())
@@ -39,7 +39,7 @@ trait CommonQueries
 
     protected function buildChocoShopQuery()
     {
-        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        return DB::connection('mysql-chocolat')
             ->query()
             ->select(
                 'shop_mains.id',
@@ -51,7 +51,7 @@ trait CommonQueries
 
     protected function buildNightShopQuery()
     {
-        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        return DB::connection('mysql-chocolat')
             ->query()
             ->select(
                 'yoasobi_shops_all.id',
@@ -63,7 +63,7 @@ trait CommonQueries
 
     protected function buildWeeklyRankingPointQuery(Carbon $date)
     {
-        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        return DB::connection('mysql-chocolat')
             ->query()
             ->select(
                 'choco_cast_id',
@@ -91,7 +91,7 @@ trait CommonQueries
 
     protected function buildRankingPointQuery(Carbon $date)
     {
-        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        return DB::connection('mysql-chocolat')
             ->query()
             ->select(
                 'id',
@@ -108,9 +108,23 @@ trait CommonQueries
             ->where('championship_start_date', $date);
     }
 
+    protected function buildTissueQuery() {
+        return DB::connection('mysql-chocolat')
+            ->query()
+            ->select('*')
+            ->from((new Tissue)->getTable(), 'tissues')
+            ->where('published_flg', DB::raw(Tissue::PUBLISHED_FLG_TRUE))
+            ->where('tissue_status', DB::raw(Tissue::TISSUE_STATUS_NORMAL))
+            ->where(function ($query) {
+                $query
+                    ->whereNotNull('image_url')
+                    ->orWhereNotNull('movie_url');
+            });
+    }
+
     protected function buildOsusumeTissueQuery(Carbon $startDate, Carbon $endDate)
     {
-        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        return DB::connection('mysql-chocolat')
             ->query()
             ->from((new TissueNightOsusumeActiveView)->getTable())
             ->where('published_flg', DB::raw(Tissue::PUBLISHED_FLG_TRUE))
@@ -124,7 +138,7 @@ trait CommonQueries
         array $excludedChocoCasts = [],
         array $excludedChocoGuests = []
     ) {
-        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        return DB::connection('mysql-chocolat')
             ->query()
             ->select('*')
             ->from((new Tissue)->getTable(), 'tissues')
@@ -156,7 +170,7 @@ trait CommonQueries
         Carbon $endDate,
         array $excludedChocoCasts = []
     ) {
-        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        return DB::connection('mysql-chocolat')
             ->query()
             ->select(
                 'id',
@@ -184,7 +198,7 @@ trait CommonQueries
 
     protected function buildShopTissueQuery(Carbon $startDate, Carbon $endDate)
     {
-        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        return DB::connection('mysql-chocolat')
             ->query()
             ->select(
                 'id',
@@ -204,12 +218,12 @@ trait CommonQueries
 
     protected function buildTissueCommentQuery()
     {
-        $tissueCommentQuery = DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        $tissueCommentQuery = DB::connection('mysql-chocolat')
             ->query()
             ->from((new TissueComment)->getTable(), 'tissue_comments')
             ->where('del', DB::raw(0));
 
-        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        return DB::connection('mysql-chocolat')
             ->query()
             ->select('tissue_comments.*')
             ->fromSub($tissueCommentQuery, 'tissue_comments')
@@ -227,7 +241,7 @@ trait CommonQueries
     {
         $tissueCommentQuery = $this->buildTissueCommentQuery();
 
-        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        return DB::connection('mysql-chocolat')
             ->query()
             ->select(
                 'tissue_id',
@@ -239,7 +253,7 @@ trait CommonQueries
 
     protected function buildHashtagQuery(array $displayedHashtagIds = [])
     {
-        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        return DB::connection('mysql-chocolat')
             ->query()
             ->select(
                 "hashtags.id AS id",

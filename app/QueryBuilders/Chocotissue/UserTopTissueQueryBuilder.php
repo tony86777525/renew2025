@@ -12,7 +12,7 @@ class UserTopTissueQueryBuilder
         QueryBuilder $chocoMypageQuery,
         QueryBuilder $chocoGuestQuery
     ): QueryBuilder {
-        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        return DB::connection('mysql-chocolat')
             ->query()
             ->select(
                 'tissues.*',
@@ -71,7 +71,7 @@ class UserTopTissueQueryBuilder
     public function buildUserRankingOrderTissueQuery(
         QueryBuilder $userTissueQuery
     ): QueryBuilder {
-        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        return DB::connection('mysql-chocolat')
             ->query()
             ->select(
                 'tissues.*',
@@ -91,7 +91,7 @@ class UserTopTissueQueryBuilder
         QueryBuilder $userTissueQuery,
         QueryBuilder $tissueCommentLastOneQuery
     ): QueryBuilder {
-        return DB::connection(env('DB_CHOCOLAT_CONNECTION', 'mysql-chocolat'))
+        return DB::connection('mysql-chocolat')
             ->query()
             ->select(
                 'tissues.*',
