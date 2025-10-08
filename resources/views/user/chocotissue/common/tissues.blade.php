@@ -7,6 +7,7 @@
             >
         </div>
         <div style="position: absolute;left: 0;top: 0;font-weight: bold;">
+            <div>Tissue ID: {{ $row->tissue->id }}</div>
             <div>User: {{ $row->tissue->user_type }}</div>
             <div>User ID: <span style="color: red;">{{ $row->tissue->user_id }}</span></div>
             <div>LIKE Count: <span style="color: red;">{{ $row->tissue->good_count + $row->tissue->total_good_count }}</span></div>

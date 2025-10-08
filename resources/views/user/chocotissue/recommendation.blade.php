@@ -8,10 +8,11 @@
     <title>第2回 夜遊びショコラ選手権！ナンバー1のキャバ嬢・キャストを決めよう！</title>
     <meta name="description" content="【夜遊びショコラ】×【体入ショコラ】コラボ企画『夜遊びショコラ選手権』を開催！全国から人気のキャバ嬢・キャストたちがナンバー1の座をかけて競います。あなたの一票が頂点を決める！推しのキャストや動画にイイネしてギフトカードをゲットしよう♪">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
-    @vite(['resources/assets/js/user/index.js', 'resources/assets/sass/user/index.scss'])
+    @vite(['resources/assets/js/user/chocotissue/recommendation.js', 'resources/assets/sass/user/chocotissue/index.scss'])
 </head>
 <body>
 <div>
@@ -19,10 +20,7 @@
         @include('user.chocotissue.common.tissues')
     </div>
 </div>
-<button data-button="loadTissue">load more</button>
 
-<div class="loading js-loader">
-    <div class="loader"></div>
-</div>
+@include('user.chocotissue.common.footer-container')
 </body>
 </html>

@@ -12,19 +12,18 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
-    @vite(['resources/assets/js/user/chocotissue/shop-ranking.js', 'resources/assets/sass/user/chocotissue/index.scss'])
+    @vite(['resources/assets/js/user/chocotissue/liked.js', 'resources/assets/sass/user/chocotissue/index.scss'])
 </head>
 <body>
-<div>
-    <div data-target="tissues">
-        @include('user.chocotissue.common.shop-ranking-tissues')
+<div class="container">
+    <div style="display: inline-flex;flex-direction: row;align-items: flex-start;flex-wrap: wrap;position: relative; margin: 0 0 50px;" data-target="tissues">
+        @include('user.chocotissue.common.tissues')
     </div>
 </div>
 
 @include('user.chocotissue.common.footer-container')
 </body>
 <script>
-    window.displayedChocoShopTableIds = {{ json_encode($displayedChocoShopTableIds) }};
-    window.displayedNightShopTableIds = {{ json_encode($displayedNightShopTableIds) }};
+    window.tissueIds = {{ json_encode($tissueIds) }};
 </script>
 </html>

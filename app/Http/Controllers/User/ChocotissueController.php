@@ -72,7 +72,7 @@ class ChocotissueController extends Controller
     public function handle(Request $request, ?int $prefId = null)
     {
         if ($request->get('sort') == 3) {
-            return self::likedTissues($request, $prefId);
+            return self::liked($request, $prefId);
         }
 
         return self::recommendations($request, $prefId);
@@ -128,7 +128,7 @@ class ChocotissueController extends Controller
                 $prefId ?? null
             );
 
-            return view('user.chocotissue.recommendations', compact(
+            return view('user.chocotissue.recommendation', compact(
                 'data'
             ));
         } catch (InvalidArgumentException $e) {
@@ -239,8 +239,26 @@ class ChocotissueController extends Controller
                 $prefId
             );
 
+            $displayedChocoShopTableIds = $data
+                ->filter(function ($row) {
+                    return $row->choco_shop_table_id !== null;
+                })
+                ->pluck('choco_shop_table_id')
+                ->values()
+                ->toArray();
+
+            $displayedNightShopTableIds = $data
+                ->filter(function ($row) {
+                    return $row->choco_shop_table_id === null && $row->night_shop_table_id !== null;
+                })
+                ->pluck('night_shop_table_id')
+                ->values()
+                ->toArray();
+
             return view('user.chocotissue.shop-ranking', compact(
-                'data'
+                'data',
+                'displayedChocoShopTableIds',
+                'displayedNightShopTableIds'
             ));
         } catch (InvalidArgumentException $e) {
             return response()->json([
@@ -397,15 +415,20 @@ class ChocotissueController extends Controller
     }
 
     /**
-     * Liked tissue
+     * Liked
      *
      * @param Request $request
      * @param integer|null $prefId
      * @return View|object
      */
-    public function likedTissues(Request $request, ?int $prefId = null)
+    public function liked(Request $request, ?int $prefId = null)
     {
-        $tissueIds = [30423];
+        $tissueIds = [
+            31182, 30749, 31083, 31186, 31190, 31184, 31189, 31187, 30674, 31188,
+            31204, 31696, 31089, 30757, 30754, 31239, 31114, 30660, 31075, 31097,
+            31249, 31210, 30816, 31136, 30662, 31072, 31191, 30658, 30661, 30639,
+            30756,
+        ];
         $page = 1;
 
         try {
@@ -415,8 +438,9 @@ class ChocotissueController extends Controller
                 $prefId
             );
 
-            return view('user.chocotissue.liked-tissue', compact(
-                'data'
+            return view('user.chocotissue.liked', compact(
+                'data',
+                'tissueIds'
             ));
         } catch (InvalidArgumentException $e) {
             return response()->json([
