@@ -377,10 +377,16 @@ class ListRepository
                 )
                 ->fromSub($shopRankQuery, 'shop_rank_data')
                 ->when(!empty($displayedChocoShopTableIds), function ($query) use ($displayedChocoShopTableIds) {
-                    $query->whereNotIn('choco_shop_table_id', $displayedChocoShopTableIds);
+                    $query->where(function ($query) use ($displayedChocoShopTableIds) {
+                        $query->whereNotIn('choco_shop_table_id', $displayedChocoShopTableIds)
+                            ->orWhereNull('choco_shop_table_id');
+                    });
                 })
                 ->when(!empty($displayedNightShopTableIds), function ($query) use ($displayedNightShopTableIds) {
-                    $query->whereNotIn('night_shop_table_id', $displayedNightShopTableIds);
+                    $query->where(function ($query) use ($displayedNightShopTableIds) {
+                        $query->whereNotIn('night_shop_table_id', $displayedNightShopTableIds)
+                            ->orWhereNull('night_shop_table_id');
+                    });
                 })
                 ->when(!empty($prefId), function ($query) use ($prefId) {
                     $query->where(DB::raw("
